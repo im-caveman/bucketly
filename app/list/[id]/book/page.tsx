@@ -59,7 +59,7 @@ export default function BookTrackerPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <Link href="/">
           <Button variant="ghost" size="sm" className="gap-2 -ml-2 mb-8">
             ← Back

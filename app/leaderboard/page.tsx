@@ -1,62 +1,77 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { LeaderboardEntry } from "@/components/bucket-list/leaderboard-entry"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-
-interface LeaderboardUser {
-  rank: number
-  username: string
-  avatar: string
-  points: number
-  completions: number
-  trend: "up" | "down" | "flat"
-}
-
-// Mock leaderboard data
-const generateMockLeaderboard = (): LeaderboardUser[] => {
-  const names = [
-    "Alex Journey",
-    "Sam Explorer",
-    "Jordan Adventure",
-    "Casey Dreams",
-    "Morgan Quest",
-    "Riley Wanderer",
-    "Taylor Adventures",
-    "Jordan Achiever",
-  ]
-  const avatars = ["🎯", "✈️", "🏔️", "🌍", "💫", "🎪", "🚀", "⭐"]
-
-  return Array.from({ length: 100 }, (_, i) => ({
-    rank: i + 1,
-    username: names[i % names.length] + (i > names.length ? ` ${Math.floor(i / names.length)}` : ""),
-    avatar: avatars[i % avatars.length],
-    points: Math.max(0, 50000 - i * 400 + Math.random() * 1000),
-    completions: Math.max(1, 200 - Math.floor(i / 2)),
-    trend: i % 5 === 0 ? "up" : i % 3 === 0 ? "down" : "flat",
-  }))
-}
-
-const mockLeaderboard = generateMockLeaderboard()
-const currentUserRank = 47
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useAuth } from "@/contexts/auth-context"
+import { useLeaderboard, useUserRank } from "@/hooks/use-leaderboard"
+import { Loader2 } from "lucide-react"
 
 export default function LeaderboardPage() {
+  const { user } = useAuth()
   const [timeframe, setTimeframe] = useState<"all-time" | "monthly" | "weekly">("all-time")
   const [category, setCategory] = useState<"global" | "by-category">("global")
+  const [page, setPage] = useState(0)
+  const pageSize = 50
 
-  const currentUser = mockLeaderboard.find((u) => u.rank === currentUserRank)
-  const topUsers = mockLeaderboard.slice(0, 10)
+  // Use SWR hooks for data fetching with caching and pagination
+  const {
+    leaderboard,
+    hasMore,
+    isLoading: leaderboardLoading,
+    isError: leaderboardError,
+    mutate: mutateLeaderboard
+  } = useLeaderboard(page, pageSize)
+
+  const { userRank: currentUserData, isLoading: userRankLoading, isError: userRankError } = useUserRank(user?.id)
+
+  const loading = leaderboardLoading || userRankLoading
+  const error = leaderboardError || userRankError
+
+  const topUsers = useMemo(() => {
+    if (!leaderboard) return []
+    // Only show top 3 for spotlight if on first page
+    return page === 0 ? leaderboard.slice(0, 3) : []
+  }, [leaderboard, page])
 
   const scrollToUser = () => {
-    // In a real app, this would scroll to the current user's position
-    const element = document.getElementById(`user-${currentUserRank}`)
-    element?.scrollIntoView({ behavior: "smooth" })
+    if (currentUserData) {
+      const element = document.getElementById(`user-${currentUserData.rank}`)
+      element?.scrollIntoView({ behavior: "smooth", block: "center" })
+    }
+  }
+
+  const handleRetry = () => {
+    mutateLeaderboard()
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading leaderboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Failed to load leaderboard. Please try again.</p>
+          <Button onClick={handleRetry}>Try Again</Button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-10">
           <h1 className="font-display text-4xl font-bold mb-2">Global Leaderboard</h1>
@@ -64,24 +79,26 @@ export default function LeaderboardPage() {
         </div>
 
         {/* Your Rank Card */}
-        {currentUser && (
+        {currentUserData && (
           <div className="mb-8 p-6 bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground uppercase font-semibold mb-1">Your Current Rank</p>
                 <div className="flex items-center gap-3">
-                  <div className="text-5xl font-display font-bold text-primary">#{currentUser.rank}</div>
+                  <div className="text-5xl font-display font-bold text-primary">#{currentUserData.rank}</div>
                   <div>
-                    <p className="font-display font-bold text-lg">{currentUser.username}</p>
+                    <p className="font-display font-bold text-lg">{currentUserData.username}</p>
                     <p className="text-sm text-muted-foreground">
-                      {currentUser.completions} completions • {Math.round(currentUser.points).toLocaleString()} points
+                      {currentUserData.completions} completions • {Math.round(currentUserData.points).toLocaleString()} points
                     </p>
                   </div>
                 </div>
               </div>
-              <Button onClick={scrollToUser} className="gap-2">
-                👀 View in List
-              </Button>
+              {currentUserData.rank <= 100 && (
+                <Button onClick={scrollToUser} className="gap-2">
+                  👀 View in List
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -112,41 +129,98 @@ export default function LeaderboardPage() {
               <Button
                 variant={timeframe === "all-time" ? "default" : "outline"}
                 onClick={() => setTimeframe("all-time")}
-                size="sm"
-              >
+                size="sm">
                 All Time
               </Button>
             </div>
 
-            {/* Top 3 Spotlight */}
-            <div className="mb-8">
-              <h2 className="font-display font-bold text-lg mb-4">Top Performers</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                {topUsers.slice(0, 3).map((user) => (
-                  <div
-                    key={user.rank}
-                    className="bg-gradient-to-b from-secondary/20 to-primary/20 rounded-lg p-6 text-center border border-primary/20"
-                  >
-                    <div className="text-5xl mb-2">{["🥇", "🥈", "🥉"][user.rank - 1]}</div>
-                    <p className="font-display font-bold text-lg mb-1">{user.username}</p>
-                    <p className="text-2xl font-display font-bold text-primary mb-2">
-                      {Math.round(user.points).toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{user.completions} completions</p>
-                  </div>
-                ))}
+            {/* Top 3 Spotlight - only on first page */}
+            {page === 0 && topUsers.length > 0 && (
+              <div className="mb-8">
+                <h2 className="font-display font-bold text-lg mb-4">Top Performers</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                  {topUsers.map((user, index) => {
+                    const isAvatarUrl = user.avatar_url && (user.avatar_url.startsWith('http') || user.avatar_url.startsWith('/'))
+                    const fallbackInitial = user.username.charAt(0).toUpperCase()
+
+                    return (
+                      <div
+                        key={user.id}
+                        className="bg-gradient-to-b from-secondary/20 to-primary/20 rounded-lg p-6 text-center border border-primary/20"
+                      >
+                        <div className="text-5xl mb-2">{["🥇", "🥈", "🥉"][index]}</div>
+                        <Avatar className="w-16 h-16 mx-auto mb-2">
+                          {isAvatarUrl && <AvatarImage src={user.avatar_url!} alt={user.username} />}
+                          <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white text-2xl font-bold">
+                            {fallbackInitial}
+                          </AvatarFallback>
+                        </Avatar>
+                        <p className="font-display font-bold text-lg mb-1">{user.username}</p>
+                        <p className="text-2xl font-display font-bold text-primary mb-2">
+                          {Math.round(user.points).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{user.completions} completions</p>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Full Leaderboard */}
             <div className="space-y-2">
               <h2 className="font-display font-bold text-lg mb-4">Leaderboard</h2>
-              {mockLeaderboard.map((user) => (
-                <div key={user.rank} id={`user-${user.rank}`}>
-                  <LeaderboardEntry {...user} isCurrentUser={user.rank === currentUserRank} />
+              {!leaderboard || leaderboard.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground mb-4">No users on the leaderboard yet.</p>
+                  <p className="text-sm text-muted-foreground">Complete bucket list items to earn points and climb the ranks!</p>
                 </div>
-              ))}
+              ) : (
+                leaderboard.map((leaderboardUser) => (
+                  <div key={leaderboardUser.id} id={`user-${leaderboardUser.rank}`}>
+                    <LeaderboardEntry
+                      rank={leaderboardUser.rank}
+                      username={leaderboardUser.username}
+                      avatar={leaderboardUser.avatar_url || leaderboardUser.username.charAt(0).toUpperCase()}
+                      points={Math.round(leaderboardUser.points)}
+                      completions={leaderboardUser.completions}
+                      isCurrentUser={user?.id === leaderboardUser.id}
+                      userId={leaderboardUser.id}
+                      bio={leaderboardUser.bio}
+                      globalRank={leaderboardUser.rank}
+                      twitterUrl={leaderboardUser.twitter_url}
+                      instagramUrl={leaderboardUser.instagram_url}
+                      linkedinUrl={leaderboardUser.linkedin_url}
+                      githubUrl={leaderboardUser.github_url}
+                      websiteUrl={leaderboardUser.website_url}
+                    />
+                  </div>
+                ))
+              )}
             </div>
+
+            {/* Pagination Controls */}
+            {!loading && !error && leaderboard && leaderboard.length > 0 && (
+              <div className="flex justify-center gap-4 mt-8">
+                <Button
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  variant="outline"
+                >
+                  Previous
+                </Button>
+                <span className="flex items-center px-4 text-sm text-muted-foreground">
+                  Page {page + 1}
+                </span>
+                <Button
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={!hasMore}
+                  variant="outline"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="category" className="space-y-4">

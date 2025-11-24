@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -14,6 +14,12 @@ import Image from "next/image"
 import { cn } from "@/lib/utils"
 import { Upload, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { useAuth } from "@/contexts/auth-context"
+import { fetchUserProfile, updateUserProfile, uploadProfileAvatar } from "@/lib/bucket-list-service"
+import type { UserProfile } from "@/lib/bucket-list-service"
+import { useRouter } from "next/navigation"
+import { validateUsername, validateBio, validateFileSize, validateImageType } from "@/lib/validation"
+import { handleSupabaseError, formatErrorMessage } from "@/lib/error-handler"
 
 const AVAILABLE_AVATARS = [
   "/avatars/user_krimson.png",
@@ -23,6 +29,11 @@ const AVAILABLE_AVATARS = [
 ]
 
 export default function SettingsPage() {
+  const { user } = useAuth()
+  const router = useRouter()
+  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [loading, setLoading] = useState(true)
+
   const [notifications, setNotifications] = useState({
     completions: true,
     followers: true,
@@ -36,32 +47,152 @@ export default function SettingsPage() {
     allowMessages: true,
   })
 
-  const [avatar, setAvatar] = useState("/avatars/user_krimson.png")
+  const [username, setUsername] = useState("")
+  const [bio, setBio] = useState("")
+  const [avatar, setAvatar] = useState<string | null>(null)
+  const [twitterUrl, setTwitterUrl] = useState("")
+  const [instagramUrl, setInstagramUrl] = useState("")
+  const [linkedinUrl, setLinkedinUrl] = useState("")
+  const [githubUrl, setGithubUrl] = useState("")
+  const [websiteUrl, setWebsiteUrl] = useState("")
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (user) {
+      loadProfile()
+    }
+  }, [user])
+
+  const loadProfile = async () => {
+    if (!user) return
+
+    try {
+      setLoading(true)
+      const profileData = await fetchUserProfile(user.id)
+      setProfile(profileData)
+      setUsername(profileData.username)
+      setBio(profileData.bio || "")
+      setAvatar(profileData.avatar_url)
+      setTwitterUrl(profileData.twitter_url || "")
+      setInstagramUrl(profileData.instagram_url || "")
+      setLinkedinUrl(profileData.linkedin_url || "")
+      setGithubUrl(profileData.github_url || "")
+      setWebsiteUrl(profileData.website_url || "")
+    } catch (err) {
+      console.error('Error loading profile:', err)
+      toast.error('Failed to load profile')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      const url = URL.createObjectURL(file)
-      setAvatar(url)
+    if (!file || !user) return
+
+    // Validate file type
+    const typeValidation = validateImageType(file)
+    if (!typeValidation.isValid) {
+      toast.error(typeValidation.error)
+      return
+    }
+
+    // Validate file size (5MB limit)
+    const sizeValidation = validateFileSize(file, 5)
+    if (!sizeValidation.isValid) {
+      toast.error(sizeValidation.error)
+      return
+    }
+
+    try {
+      setIsUploadingAvatar(true)
+      const avatarUrl = await uploadProfileAvatar(user.id, file)
+      setAvatar(avatarUrl)
       setIsAvatarDialogOpen(false)
+      toast.success('Avatar uploaded successfully')
+    } catch (err: any) {
+      const apiError = handleSupabaseError(err)
+      toast.error(formatErrorMessage(apiError))
+    } finally {
+      setIsUploadingAvatar(false)
     }
   }
 
   const handleSave = async () => {
-    setIsSaving(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-    setIsSaving(false)
-    toast.success("Profile updated successfully", {
-      description: "Your changes have been saved to your account.",
-    })
+    if (!user) return
+
+    // Validate username
+    const usernameValidation = validateUsername(username)
+    if (!usernameValidation.isValid) {
+      toast.error(usernameValidation.error)
+      return
+    }
+
+    // Validate bio
+    const bioValidation = validateBio(bio)
+    if (!bioValidation.isValid) {
+      toast.error(bioValidation.error)
+      return
+    }
+
+    try {
+      setIsSaving(true)
+
+      await updateUserProfile(user.id, {
+        username,
+        bio: bio || null,
+        avatar_url: avatar,
+        twitter_url: twitterUrl || null,
+        instagram_url: instagramUrl || null,
+        linkedin_url: linkedinUrl || null,
+        github_url: githubUrl || null,
+        website_url: websiteUrl || null,
+      })
+
+      toast.success("Profile updated successfully", {
+        description: "Your changes have been saved to your account.",
+      })
+
+      // Reload profile to get updated data
+      await loadProfile()
+
+      // Redirect to profile page
+      router.push(`/profile/${username}`)
+    } catch (err: any) {
+      const apiError = handleSupabaseError(err)
+      toast.error(formatErrorMessage(apiError))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading settings...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-destructive mb-4">Failed to load profile</p>
+          <Button onClick={loadProfile}>Try Again</Button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="font-display text-4xl font-bold mb-2">Settings</h1>
           <p className="text-muted-foreground">Manage your account preferences and privacy</p>
@@ -133,9 +264,19 @@ export default function SettingsPage() {
                             variant="outline"
                             className="w-full bg-transparent"
                             onClick={() => document.getElementById("avatar-upload")?.click()}
+                            disabled={isUploadingAvatar}
                           >
-                            <Upload className="mr-2 h-4 w-4" />
-                            Upload Image
+                            {isUploadingAvatar ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Uploading...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="mr-2 h-4 w-4" />
+                                Upload Image
+                              </>
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -145,8 +286,18 @@ export default function SettingsPage() {
 
                 <div className="flex-1 space-y-4 w-full">
                   <div>
-                    <Label htmlFor="display-name">Display Name</Label>
-                    <Input id="display-name" defaultValue="KRIMSON" className="mt-2" />
+                    <Label htmlFor="username">Username</Label>
+                    <Input
+                      id="username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="mt-2"
+                      minLength={3}
+                      maxLength={30}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      3-30 characters, must be unique
+                    </p>
                   </div>
                   <div>
                     <Label htmlFor="bio">Bio</Label>
@@ -154,19 +305,90 @@ export default function SettingsPage() {
                       id="bio"
                       placeholder="Tell us about yourself..."
                       className="mt-2 min-h-20"
-                      defaultValue="Adventure seeker and bucket list enthusiast!"
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      maxLength={500}
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {bio.length}/500 characters
+                    </p>
                   </div>
                   <div>
-                    <Label htmlFor="location">Location</Label>
+                    <Label htmlFor="email">Email</Label>
                     <Input
-                      id="location"
-                      placeholder="Your city or country"
+                      id="email"
+                      value={user?.email || ''}
                       className="mt-2"
-                      defaultValue="Global Nomad"
+                      disabled
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Email cannot be changed
+                    </p>
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Social Links */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <span>🔗</span>
+                Social Links
+              </CardTitle>
+              <CardDescription>Connect your social media profiles</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="twitter">Twitter / X</Label>
+                <Input
+                  id="twitter"
+                  placeholder="https://twitter.com/username"
+                  value={twitterUrl}
+                  onChange={(e) => setTwitterUrl(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="instagram">Instagram</Label>
+                <Input
+                  id="instagram"
+                  placeholder="https://instagram.com/username"
+                  value={instagramUrl}
+                  onChange={(e) => setInstagramUrl(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="linkedin">LinkedIn</Label>
+                <Input
+                  id="linkedin"
+                  placeholder="https://linkedin.com/in/username"
+                  value={linkedinUrl}
+                  onChange={(e) => setLinkedinUrl(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="github">GitHub</Label>
+                <Input
+                  id="github"
+                  placeholder="https://github.com/username"
+                  value={githubUrl}
+                  onChange={(e) => setGithubUrl(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="website">Personal Website</Label>
+                <Input
+                  id="website"
+                  placeholder="https://yourwebsite.com"
+                  value={websiteUrl}
+                  onChange={(e) => setWebsiteUrl(e.target.value)}
+                  className="mt-2"
+                />
               </div>
               <div className="flex justify-end">
                 <Button onClick={handleSave} disabled={isSaving}>

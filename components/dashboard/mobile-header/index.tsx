@@ -1,4 +1,7 @@
+"use client";
+
 import * as React from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -7,13 +10,40 @@ import MonkeyIcon from "@/components/icons/monkey";
 import MobileNotifications from "@/components/dashboard/notifications/mobile-notifications";
 import type { MockData } from "@/types/dashboard";
 import BellIcon from "@/components/icons/bell";
+import { useAuth } from "@/contexts/auth-context";
+import { fetchUserNotifications } from "@/lib/notification-service";
+import type { Notification } from "@/types/dashboard";
 
 interface MobileHeaderProps {
   mockData: MockData;
 }
 
 export function MobileHeader({ mockData }: MobileHeaderProps) {
-  const unreadCount = mockData.notifications.filter((n) => !n.read).length;
+  const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setUnreadCount(0);
+      return;
+    }
+
+    async function loadUnreadCount() {
+      try {
+        const notifications = await fetchUserNotifications(user.id);
+        const unread = notifications.filter((n) => !n.read).length;
+        setUnreadCount(unread);
+      } catch (error) {
+        console.error('Error loading notification count:', error);
+      }
+    }
+
+    loadUnreadCount();
+
+    // Refresh count periodically
+    const interval = setInterval(loadUnreadCount, 30000); // Every 30 seconds
+    return () => clearInterval(interval);
+  }, [user?.id]);
 
   return (
     <div className="lg:hidden h-header-mobile sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
@@ -49,9 +79,7 @@ export function MobileHeader({ mockData }: MobileHeaderProps) {
             side="right"
             className="w-[80%] max-w-md p-0"
           >
-            <MobileNotifications
-              initialNotifications={mockData.notifications}
-            />
+            <MobileNotifications />
           </SheetContent>
         </Sheet>
       </div>

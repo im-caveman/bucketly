@@ -2,6 +2,7 @@
 
 import type { UserProfile } from "@/types/bucket-list"
 import { Card, CardContent } from "@/components/ui/card"
+import Image from "next/image"
 
 interface UserStatsProps {
   user: UserProfile
@@ -15,14 +16,30 @@ export function UserStats({ user }: UserStatsProps) {
     return `#${rank}`
   }
 
+  // Check if avatar is a URL or emoji/text
+  const isAvatarUrl = user.avatar && (user.avatar.startsWith('http') || user.avatar.startsWith('/'))
+  const avatarInitial = user.username ? user.username.charAt(0).toUpperCase() : '?'
+
   return (
     <Card className="overflow-hidden bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
       <CardContent className="pt-6">
         <div className="flex items-start gap-4">
           <div className="relative">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-2xl font-bold text-white">
-              {user.avatar}
-            </div>
+            {isAvatarUrl ? (
+              <div className="w-16 h-16 rounded-full overflow-hidden relative">
+                <Image 
+                  src={user.avatar} 
+                  alt={user.username}
+                  fill
+                  className="object-cover"
+                  sizes="64px"
+                />
+              </div>
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-2xl font-bold text-white">
+                {user.avatar || avatarInitial}
+              </div>
+            )}
             <div className="absolute -bottom-2 -right-2 bg-secondary text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center">
               {getMedalIcon(user.globalRank)}
             </div>

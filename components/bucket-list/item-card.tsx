@@ -1,15 +1,19 @@
 "use client"
 
+import { useState } from "react"
 import type { BucketListItem } from "@/types/bucket-list"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { toggleItemCompletion } from "@/lib/bucket-list-service"
 
 interface ItemCardProps {
   item: BucketListItem
-  onToggle: (completed: boolean) => void
+  onToggle?: (completed: boolean) => void
   onUploadMemory: () => void
+  onCompletionChange?: () => void
 }
 
 const difficultyColors = {
@@ -18,7 +22,46 @@ const difficultyColors = {
   hard: "bg-destructive/10 text-destructive",
 }
 
-export function ItemCard({ item, onToggle, onUploadMemory }: ItemCardProps) {
+export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange }: ItemCardProps) {
+  const { toast } = useToast()
+  const [isUpdating, setIsUpdating] = useState(false)
+
+  const handleToggle = async (checked: boolean | string) => {
+    const newCompleted = checked === true
+
+    // If custom onToggle is provided, use it (for backward compatibility)
+    if (onToggle) {
+      onToggle(newCompleted)
+      return
+    }
+
+    // Otherwise, use the API
+    setIsUpdating(true)
+    try {
+      await toggleItemCompletion(item.id, newCompleted)
+      
+      toast({
+        title: newCompleted ? "Item completed! 🎉" : "Item marked as incomplete",
+        description: newCompleted 
+          ? `You earned ${item.points} points!` 
+          : "Keep working on it!",
+      })
+
+      // Notify parent to refresh data
+      if (onCompletionChange) {
+        onCompletionChange()
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update item. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
   return (
     <Card
       className={`overflow-hidden transition-all duration-300 ${
@@ -27,7 +70,12 @@ export function ItemCard({ item, onToggle, onUploadMemory }: ItemCardProps) {
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
-          <Checkbox checked={item.completed} onCheckedChange={onToggle} className="mt-1" />
+          <Checkbox 
+            checked={item.completed} 
+            onCheckedChange={handleToggle} 
+            className="mt-1"
+            disabled={isUpdating}
+          />
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex-1">

@@ -1,97 +1,57 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { TimelineEventComponent } from "@/components/bucket-list/timeline-event"
 import type { TimelineEvent } from "@/types/bucket-list"
-
-// Mock timeline data
-const mockTimelineEvents: TimelineEvent[] = [
-  {
-    id: "1",
-    type: "item_completed",
-    title: "Completed an Epic Journey",
-    description: "Finished the challenging quest",
-    timestamp: "2025-01-20T14:30:00",
-    itemTitle: "Visit Japan",
-    listName: "Travel the World",
-    points: 100,
-    photos: ["/tokyo-temples.jpg"],
-  },
-  {
-    id: "2",
-    type: "memory_uploaded",
-    title: "Memory Added",
-    description: "Uploaded photos and reflections",
-    timestamp: "2025-01-20T14:35:00",
-    itemTitle: "Visit Japan",
-    listName: "Travel the World",
-    photos: ["/tokyo-temples.jpg"],
-  },
-  {
-    id: "3",
-    type: "memory_shared",
-    title: "Shared Your Achievement",
-    description: "Made memory public on the community",
-    timestamp: "2025-01-20T15:00:00",
-    itemTitle: "Visit Japan",
-    listName: "Travel the World",
-    isPublic: true,
-  },
-  {
-    id: "4",
-    type: "item_completed",
-    title: "Conquered Another Challenge",
-    description: "Reached a major milestone",
-    timestamp: "2025-01-18T10:15:00",
-    itemTitle: "Trek Machu Picchu",
-    listName: "Travel the World",
-    points: 150,
-    photos: ["/machu-picchu-mountain.jpg"],
-  },
-  {
-    id: "5",
-    type: "list_followed",
-    title: "Started Following a List",
-    description: "Added to your bucket list journey",
-    timestamp: "2025-01-15T09:20:00",
-    listName: "Read 50 Classics",
-  },
-  {
-    id: "6",
-    type: "achievement_unlocked",
-    title: "Achievement Unlocked",
-    description: "Completed 10 items across all lists",
-    timestamp: "2025-01-10T16:45:00",
-    points: 500,
-  },
-  {
-    id: "7",
-    type: "list_created",
-    title: "Created New Bucket List",
-    description: "Started a new adventure",
-    timestamp: "2025-01-05T11:30:00",
-    listName: "Culinary Adventures",
-  },
-  {
-    id: "8",
-    type: "item_completed",
-    title: "Completed an Item",
-    description: "Making progress on your goals",
-    timestamp: "2025-01-01T12:00:00",
-    itemTitle: "Authentic Ramen in Tokyo",
-    listName: "Culinary Adventures",
-    points: 50,
-  },
-]
+import { useAuth } from "@/contexts/auth-context"
+import { useUserTimeline } from "@/hooks/use-timeline"
+import { useRouter } from "next/navigation"
+import type { TimelineEventData } from "@/lib/bucket-list-service"
 
 type FilterType = "all" | "completed" | "shared" | "achievements"
 
 export default function TimelinePage() {
-  const [events, setEvents] = useState(mockTimelineEvents)
+  const { user } = useAuth()
+  const router = useRouter()
   const [filter, setFilter] = useState<FilterType>("all")
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest")
+  const [page, setPage] = useState(0)
+  const pageSize = 50
+
+  // Use SWR hook for data fetching with caching and pagination
+  const {
+    events: timelineData,
+    hasMore,
+    isLoading: loading,
+    isError: error,
+    mutate
+  } = useUserTimeline(user?.id, page, pageSize)
+
+  // Transform database events to UI format
+  const events = useMemo(() => {
+    if (!timelineData) return []
+
+    return timelineData.map((event: TimelineEventData) => ({
+      id: event.id,
+      type: event.event_type as any,
+      title: event.title,
+      description: event.description || '',
+      timestamp: event.created_at,
+      itemTitle: event.metadata?.item_title,
+      listName: event.metadata?.list_name,
+      points: event.metadata?.points,
+      photos: event.metadata?.photos || [],
+      isPublic: event.is_public,
+    }))
+  }, [timelineData])
+
+  // Redirect if not logged in
+  if (!user && !loading) {
+    router.push('/auth/login')
+    return null
+  }
 
   const filteredEvents = events
     .filter((event) => {
@@ -109,9 +69,31 @@ export default function TimelinePage() {
 
   const totalPoints = events.filter((e) => e.points).reduce((sum, e) => sum + (e.points || 0), 0)
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading your timeline...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg text-destructive mb-4">Failed to load timeline events</p>
+          <Button onClick={() => mutate()}>Try Again</Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-10">
           <h1 className="font-display text-4xl font-bold mb-2">Your Timeline</h1>
@@ -184,6 +166,29 @@ export default function TimelinePage() {
             </div>
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {!loading && !error && filteredEvents.length > 0 && (
+          <div className="flex justify-center gap-4 mt-8">
+            <Button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              variant="outline"
+            >
+              Previous
+            </Button>
+            <span className="flex items-center px-4 text-sm text-muted-foreground">
+              Page {page + 1}
+            </span>
+            <Button
+              onClick={() => setPage(p => p + 1)}
+              disabled={!hasMore}
+              variant="outline"
+            >
+              Next
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -5,15 +5,12 @@ import type { Metadata } from "next"
 import { V0Provider } from "@/lib/v0-context"
 import localFont from "next/font/local"
 import { SidebarProvider } from "@/components/ui/sidebar"
-import { MobileHeader } from "@/components/dashboard/mobile-header"
-import { DashboardSidebar } from "@/components/dashboard/sidebar"
 import mockDataJson from "@/mock.json"
 import type { MockData } from "@/types/dashboard"
-import Widget from "@/components/dashboard/widget"
-import Notifications from "@/components/dashboard/notifications"
-import { MobileChat } from "@/components/chat/mobile-chat"
-import Chat from "@/components/chat"
 import { Toaster } from "@/components/ui/sonner"
+import { AuthProvider } from "@/contexts/auth-context"
+import { SWRConfigProvider } from "@/contexts/swr-config-provider"
+import { LayoutContent } from "../components/layout-content"
 
 const mockData = mockDataJson as MockData
 
@@ -31,12 +28,53 @@ const rebelGrotesk = localFont({
 const isV0 = process.env["VERCEL_URL"]?.includes("vusercontent.net") ?? false
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   title: {
     template: "%s – Bucketly",
-    default: "Bucketly",
+    default: "Bucketly - Turn Dreams Into Achievements",
   },
-  description: "The ultimate bucket list app. Track your life goals and memories.",
-    generator: 'v0.app'
+  description: "Track your bucket list, compete with friends, and celebrate every milestone in the ultimate gamified goal-tracking experience. Join thousands turning dreams into reality.",
+  generator: 'v0.app',
+  keywords: ['bucket list', 'goal tracking', 'gamification', 'achievements', 'progress tracking', 'social goals', 'life goals', 'bucket list app'],
+  authors: [{ name: 'Bucketly' }],
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://bucketly.app',
+    siteName: 'Bucketly',
+    title: 'Bucketly - Turn Dreams Into Achievements',
+    description: 'Track your bucket list, compete with friends, and celebrate every milestone in the ultimate gamified goal-tracking experience.',
+    images: [
+      {
+        url: '/opengraph-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Bucketly - Gamified Bucket List Tracking',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Bucketly - Turn Dreams Into Achievements',
+    description: 'Track your bucket list, compete with friends, and celebrate every milestone in the ultimate gamified goal-tracking experience.',
+    images: ['/opengraph-image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    // Add verification codes when available
+    // google: 'your-google-verification-code',
+    // yandex: 'your-yandex-verification-code',
+  },
 }
 
 export default function RootLayout({
@@ -45,37 +83,23 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <link rel="preload" href="/fonts/Rebels-Fett.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       </head>
       <body className={`${rebelGrotesk.variable} ${robotoMono.variable} antialiased`}>
-        <V0Provider isV0={isV0}>
-          <SidebarProvider>
-            {/* Mobile Header - only visible on mobile */}
-            <MobileHeader mockData={mockData} />
-
-            {/* Desktop Layout */}
-            <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-gap lg:px-sides">
-              <div className="hidden lg:block col-span-2 top-0 relative">
-                <DashboardSidebar />
-              </div>
-              <div className="col-span-1 lg:col-span-7">{children}</div>
-              <div className="col-span-3 hidden lg:block">
-                <div className="space-y-gap py-sides min-h-screen max-h-screen sticky top-0 overflow-clip">
-                  <Widget widgetData={mockData.widgetData} />
-                  <Notifications initialNotifications={mockData.notifications} />
-                  <Chat />
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Chat - floating CTA with drawer */}
-            <MobileChat />
-            {/* Adding Toaster component */}
-            <Toaster />
-          </SidebarProvider>
-        </V0Provider>
+        <AuthProvider>
+          <SWRConfigProvider>
+            <V0Provider isV0={isV0}>
+              <SidebarProvider>
+                <LayoutContent mockData={mockData}>
+                  {children}
+                </LayoutContent>
+                <Toaster />
+              </SidebarProvider>
+            </V0Provider>
+          </SWRConfigProvider>
+        </AuthProvider>
       </body>
     </html>
   )

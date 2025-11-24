@@ -14,6 +14,7 @@ interface WizardStepProps {
   onBack: () => void
   isLastStep: boolean
   isNextDisabled?: boolean
+  isLoading?: boolean
 }
 
 export function WizardStep({
@@ -25,6 +26,7 @@ export function WizardStep({
   onBack,
   isLastStep,
   isNextDisabled,
+  isLoading,
 }: WizardStepProps) {
   return (
     <div>
@@ -63,8 +65,8 @@ export function WizardStep({
             ← Back
           </Button>
         )}
-        <Button onClick={onNext} disabled={isNextDisabled} className="flex-1">
-          {isLastStep ? "🎉 Create List" : "Next →"}
+        <Button onClick={onNext} disabled={isNextDisabled || isLoading} className="flex-1">
+          {isLoading ? "Creating..." : isLastStep ? "🎉 Create List" : "Next →"}
         </Button>
       </div>
     </div>

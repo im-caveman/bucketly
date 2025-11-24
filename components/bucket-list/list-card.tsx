@@ -5,27 +5,92 @@ import type React from "react"
 import type { BucketList } from "@/types/bucket-list"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
+import { followBucketList, unfollowBucketList, createTimelineEvent } from "@/lib/bucket-list-service"
 import Link from "next/link"
 import { useState } from "react"
 
 interface ListCardProps {
   list: BucketList
   compact?: boolean
+  onFollowChange?: () => void
 }
 
-export function ListCard({ list, compact = false }: ListCardProps) {
+export function ListCard({ list, compact = false, onFollowChange }: ListCardProps) {
   const [isFollowing, setIsFollowing] = useState(list.isFollowing)
   const [followerCount, setFollowerCount] = useState(list.followers)
+  const [isLoading, setIsLoading] = useState(false)
+  const { toast } = useToast()
+  const { user } = useAuth()
 
   const completed = list.items.filter((item) => item.completed).length
   const total = list.items.length
   const percentage = Math.round((completed / total) * 100)
 
-  const handleFollowToggle = (e: React.MouseEvent) => {
+  const handleFollowToggle = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsFollowing(!isFollowing)
-    setFollowerCount(isFollowing ? followerCount - 1 : followerCount + 1)
+
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to follow lists",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      if (isFollowing) {
+        await unfollowBucketList(user.id, list.id)
+        setIsFollowing(false)
+        setFollowerCount(followerCount - 1)
+        toast({
+          title: "Unfollowed",
+          description: `You unfollowed "${list.name}"`,
+        })
+      } else {
+        await followBucketList(user.id, list.id)
+        setIsFollowing(true)
+        setFollowerCount(followerCount + 1)
+        
+        // Create timeline event for following a list
+        await createTimelineEvent(
+          user.id,
+          'list_followed',
+          `Following: ${list.name}`,
+          `Started following a ${list.category} bucket list`,
+          {
+            list_id: list.id,
+            list_name: list.name,
+            category: list.category,
+          },
+          true
+        )
+        
+        toast({
+          title: "Following",
+          description: `You are now following "${list.name}"`,
+        })
+      }
+      
+      // Notify parent component of follow change
+      if (onFollowChange) {
+        onFollowChange()
+      }
+    } catch (error: any) {
+      console.error('Error toggling follow:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update follow status",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   if (compact) {
@@ -101,8 +166,14 @@ export function ListCard({ list, compact = false }: ListCardProps) {
           </div>
 
           {/* Follow Button */}
-          <Button onClick={handleFollowToggle} variant={isFollowing ? "default" : "outline"} className="w-full mt-auto" size="sm">
-            {isFollowing ? "Following" : "Follow List"}
+          <Button 
+            onClick={handleFollowToggle} 
+            variant={isFollowing ? "default" : "outline"} 
+            className="w-full mt-auto" 
+            size="sm"
+            disabled={isLoading}
+          >
+            {isLoading ? "..." : isFollowing ? "Following" : "Follow List"}
           </Button>
         </CardContent>
       </Card>

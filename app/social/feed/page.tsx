@@ -1,209 +1,246 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-
-interface SocialPost {
-  id: string
-  userId: string
-  username: string
-  avatar: string
-  itemCompleted: string
-  listName: string
-  photos: string[]
-  reflection: string
-  points: number
-  timestamp: string
-  likes: number
-  comments: number
-  liked: boolean
-}
-
-// Mock social feed data
-const mockFeedPosts: SocialPost[] = [
-  {
-    id: "1",
-    userId: "user1",
-    username: "Alex Journey",
-    avatar: "🎯",
-    itemCompleted: "Visit Japan",
-    listName: "Travel the World",
-    photos: ["/placeholder.svg?key=abc123", "/placeholder.svg?key=def456"],
-    reflection:
-      "Standing in front of the ancient temples of Kyoto was an incredible experience. The spiritual atmosphere and beautiful gardens left me speechless. This is definitely one of my favorite memories!",
-    points: 100,
-    timestamp: "2 hours ago",
-    likes: 234,
-    comments: 18,
-    liked: false,
-  },
-  {
-    id: "2",
-    userId: "user2",
-    username: "Sam Explorer",
-    avatar: "✈️",
-    itemCompleted: "Trek Machu Picchu",
-    listName: "Travel the World",
-    photos: ["/placeholder.svg?key=ghi789"],
-    reflection:
-      "The hike was incredibly challenging but absolutely worth it. Reaching the summit at sunrise and seeing the ancient city revealed was a moment I'll never forget.",
-    points: 150,
-    timestamp: "5 hours ago",
-    likes: 567,
-    comments: 42,
-    liked: true,
-  },
-  {
-    id: "3",
-    userId: "user3",
-    username: "Casey Dreams",
-    avatar: "🌍",
-    itemCompleted: "Complete a Novel",
-    listName: "Life Achievements",
-    photos: ["/placeholder.svg?key=jkl012"],
-    reflection:
-      'Finally finished my first novel! It\'s been a long journey with many ups and downs, but seeing those words "The End" on the page feels surreal.',
-    points: 200,
-    timestamp: "1 day ago",
-    likes: 892,
-    comments: 67,
-    liked: false,
-  },
-]
+import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
+import { fetchSocialFeed, type TimelineEventWithProfile } from "@/lib/bucket-list-service"
+import { useRouter } from "next/navigation"
 
 export default function SocialFeedPage() {
-  const [posts, setPosts] = useState(mockFeedPosts)
-  const [filter, setFilter] = useState<"all" | "friends" | "following">("all")
-  const [newComment, setNewComment] = useState("")
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const router = useRouter()
+  const [events, setEvents] = useState<TimelineEventWithProfile[]>([])
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
 
-  const handleLike = (postId: string) => {
-    setPosts(
-      posts.map((post) =>
-        post.id === postId
-          ? { ...post, liked: !post.liked, likes: post.liked ? post.likes - 1 : post.likes + 1 }
-          : post,
-      ),
+  useEffect(() => {
+    if (!user) {
+      router.push('/auth/login')
+      return
+    }
+
+    async function loadFeed() {
+      try {
+        setLoading(true)
+        const { events: feedEvents, hasMore: more } = await fetchSocialFeed(user!.id, 0, 20)
+        setEvents(feedEvents)
+        setHasMore(more)
+        setPage(0)
+      } catch (error: any) {
+        console.error('Error loading social feed:', error)
+        toast({
+          title: "Error",
+          description: error.message || "Failed to load social feed",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadFeed()
+  }, [user, router, toast])
+
+  const loadMore = async () => {
+    if (!user || loadingMore) return
+
+    try {
+      setLoadingMore(true)
+      const nextPage = page + 1
+      const { events: moreEvents, hasMore: more } = await fetchSocialFeed(user!.id, nextPage, 20)
+      setEvents(prev => [...prev, ...moreEvents])
+      setHasMore(more)
+      setPage(nextPage)
+    } catch (error: any) {
+      console.error('Error loading more events:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load more events",
+        variant: "destructive",
+      })
+    } finally {
+      setLoadingMore(false)
+    }
+  }
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 60) {
+      return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`
+    } else if (diffHours < 24) {
+      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`
+    } else if (diffDays < 7) {
+      return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`
+    } else {
+      return date.toLocaleDateString()
+    }
+  }
+
+  const getEventIcon = (eventType: string) => {
+    switch (eventType) {
+      case 'item_completed':
+        return '✅'
+      case 'memory_uploaded':
+      case 'memory_shared':
+        return '📸'
+      case 'list_created':
+        return '📝'
+      case 'list_followed':
+        return '👥'
+      case 'achievement_unlocked':
+        return '🏆'
+      default:
+        return '📌'
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="text-center py-20">
+            <p className="text-xl text-muted-foreground">Loading your social feed...</p>
+          </div>
+        </div>
+      </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="font-display text-4xl font-bold mb-2">Community Feed</h1>
-          <p className="text-lg text-muted-foreground">See what others in the community are achieving</p>
+          <h1 className="font-display text-4xl font-bold mb-2">Social Feed</h1>
+          <p className="text-lg text-muted-foreground">See what people you follow are achieving</p>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2 mb-8">
-          <Button variant={filter === "all" ? "default" : "outline"} onClick={() => setFilter("all")}>
-            All
-          </Button>
-          <Button variant={filter === "friends" ? "default" : "outline"} onClick={() => setFilter("friends")}>
-            Friends
-          </Button>
-          <Button variant={filter === "following" ? "default" : "outline"} onClick={() => setFilter("following")}>
-            Following
-          </Button>
-        </div>
-
-        {/* Feed Posts */}
-        <div className="space-y-6">
-          {posts.map((post) => (
-            <Card key={post.id} className="overflow-hidden">
-              {/* Post Header */}
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xl font-bold text-white">
-                      {post.avatar}
-                    </div>
-                    <div>
-                      <p className="font-display font-bold">{post.username}</p>
-                      <p className="text-xs text-muted-foreground">{post.timestamp}</p>
-                    </div>
-                  </div>
-                  <Badge className="gap-1">
-                    <span>⭐</span>+{post.points}
-                  </Badge>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4 pb-4">
-                {/* Achievement Title */}
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Completed</p>
-                  <p className="font-display font-bold text-lg">{post.itemCompleted}</p>
-                  <p className="text-sm text-muted-foreground">{post.listName}</p>
-                </div>
-
-                {/* Photos Gallery */}
-                {post.photos.length > 0 && (
-                  <div
-                    className={`grid gap-2 ${
-                      post.photos.length === 1
-                        ? "grid-cols-1"
-                        : post.photos.length === 2
-                          ? "grid-cols-2"
-                          : "grid-cols-2"
-                    }`}
-                  >
-                    {post.photos.map((photo, idx) => (
-                      <div key={idx} className="aspect-square rounded-lg overflow-hidden bg-muted">
-                        <img
-                          src={photo || "/placeholder.svg"}
-                          alt={`Post ${idx + 1}`}
-                          className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                        />
+        {/* Feed Events */}
+        {events.length === 0 ? (
+          <Card className="p-8 text-center">
+            <p className="text-lg text-muted-foreground mb-4">
+              Your feed is empty. Follow some bucket lists to see updates!
+            </p>
+            <Button onClick={() => router.push('/explore')} variant="outline">
+              Explore Lists
+            </Button>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {events.map((event) => (
+              <Card key={event.id} className="overflow-hidden">
+                {/* Event Header */}
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-xl font-bold text-white">
+                        {event.avatar_url ? (
+                          <img
+                            src={event.avatar_url}
+                            alt={event.username}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          event.username.charAt(0).toUpperCase()
+                        )}
                       </div>
-                    ))}
+                      <div>
+                        <p className="font-display font-bold">{event.username}</p>
+                        <p className="text-xs text-muted-foreground">{formatTimestamp(event.created_at)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{getEventIcon(event.event_type)}</span>
+                      {event.metadata?.points && (
+                        <Badge className="gap-1">
+                          <span>⭐</span>+{event.metadata.points}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                )}
+                </CardHeader>
 
-                {/* Reflection Text */}
-                <p className="text-foreground leading-relaxed">{post.reflection}</p>
-
-                {/* Interaction Buttons */}
-                <div className="flex gap-4 pt-4 border-t border-border">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleLike(post.id)}
-                    className={`gap-2 flex-1 ${post.liked ? "text-primary" : ""}`}
-                  >
-                    <span>{post.liked ? "❤️" : "🤍"}</span>
-                    {post.likes} likes
-                  </Button>
-                  <Button variant="ghost" size="sm" className="gap-2 flex-1">
-                    <span>💬</span>
-                    {post.comments} comments
-                  </Button>
-                  <Button variant="ghost" size="sm" className="gap-2 flex-1">
-                    <span>↗️</span>
-                    Share
-                  </Button>
-                </div>
-
-                {/* Comment Input */}
-                <div className="pt-3 border-t border-border">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Add a comment..."
-                      className="flex-1 px-3 py-2 rounded-lg border border-border bg-muted/50 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
-                    <Button size="sm" variant="outline">
-                      Post
-                    </Button>
+                <CardContent className="space-y-3 pb-4">
+                  {/* Event Title and Description */}
+                  <div>
+                    <p className="font-display font-bold text-lg">{event.title}</p>
+                    {event.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
+                    )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+
+                  {/* Event Metadata */}
+                  {event.metadata && (
+                    <div className="space-y-2">
+                      {event.metadata.item_title && (
+                        <p className="text-sm">
+                          <span className="text-muted-foreground">Item: </span>
+                          <span className="font-medium">{event.metadata.item_title}</span>
+                        </p>
+                      )}
+                      {event.metadata.list_name && (
+                        <p className="text-sm">
+                          <span className="text-muted-foreground">List: </span>
+                          <span className="font-medium">{event.metadata.list_name}</span>
+                        </p>
+                      )}
+                      {event.metadata.reflection && (
+                        <p className="text-foreground leading-relaxed mt-2 p-3 bg-muted/50 rounded-lg">
+                          {event.metadata.reflection}
+                        </p>
+                      )}
+                      {event.metadata.photos && Array.isArray(event.metadata.photos) && event.metadata.photos.length > 0 && (
+                        <div
+                          className={`grid gap-2 mt-3 ${event.metadata.photos.length === 1
+                              ? "grid-cols-1"
+                              : event.metadata.photos.length === 2
+                                ? "grid-cols-2"
+                                : "grid-cols-2"
+                            }`}
+                        >
+                          {event.metadata.photos.map((photo: string, idx: number) => (
+                            <div key={idx} className="aspect-square rounded-lg overflow-hidden bg-muted">
+                              <img
+                                src={photo || "/placeholder.svg"}
+                                alt={`Photo ${idx + 1}`}
+                                className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+
+            {/* Load More Button */}
+            {hasMore && (
+              <div className="text-center pt-4">
+                <Button
+                  onClick={loadMore}
+                  variant="outline"
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? "Loading..." : "Load More"}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

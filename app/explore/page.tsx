@@ -6,194 +6,99 @@ import { CategoryFilter } from "@/components/bucket-list/category-filter"
 import { SortMenu } from "@/components/bucket-list/sort-menu"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAuth } from "@/contexts/auth-context"
+import { usePublicBucketLists, useSearchBucketLists, useTrendingBucketLists } from "@/hooks/use-bucket-lists"
+import type { BucketListWithItems } from "@/lib/bucket-list-service"
 import type { Category, BucketList } from "@/types/bucket-list"
-
-// Extended mock data for explore page
-const allAvailableLists: BucketList[] = [
-  {
-    id: "1",
-    name: "Travel the World",
-    description: "Visit 50 countries and experience different cultures",
-    category: "places",
-    items: Array(50)
-      .fill(null)
-      .map((_, i) => ({
-        id: `${i}`,
-        title: `Location ${i + 1}`,
-        description: "Explore",
-        points: 100,
-        completed: Math.random() > 0.7,
-        difficulty: ["easy", "medium", "hard"][Math.floor(Math.random() * 3)] as any,
-      })),
-    isFollowing: false,
-    followers: 2450,
-    createdBy: "Global Explorers",
-    isPublic: true,
-  },
-  {
-    id: "2",
-    name: "Culinary Adventures",
-    description: "Try 100 iconic dishes from around the world",
-    category: "cuisines",
-    items: Array(100)
-      .fill(null)
-      .map((_, i) => ({
-        id: `${i}`,
-        title: `Dish ${i + 1}`,
-        description: "Taste",
-        points: 50,
-        completed: false,
-        difficulty: ["easy", "medium"][Math.floor(Math.random() * 2)] as any,
-      })),
-    isFollowing: false,
-    followers: 1856,
-    createdBy: "Food Lovers",
-    isPublic: true,
-  },
-  {
-    id: "3",
-    name: "Read 50 Classics",
-    description: "Read the most influential books of all time",
-    category: "books",
-    items: Array(50)
-      .fill(null)
-      .map((_, i) => ({
-        id: `${i}`,
-        title: `Book ${i + 1}`,
-        description: "Read",
-        points: 80,
-        completed: false,
-        difficulty: ["medium", "hard"][Math.floor(Math.random() * 2)] as any,
-      })),
-    isFollowing: false,
-    followers: 3100,
-    createdBy: "Book Club",
-    isPublic: true,
-  },
-  {
-    id: "4",
-    name: "Ultimate Adventure Sports",
-    description: "Try 25 extreme sports and adrenaline activities",
-    category: "adventures",
-    items: Array(25)
-      .fill(null)
-      .map((_, i) => ({
-        id: `${i}`,
-        title: `Activity ${i + 1}`,
-        description: "Experience",
-        points: 150,
-        completed: false,
-        difficulty: "hard",
-      })),
-    isFollowing: false,
-    followers: 892,
-    createdBy: "Thrill Seekers",
-    isPublic: true,
-  },
-  {
-    id: "5",
-    name: "Iconic Monuments",
-    description: "Visit 30 UNESCO world heritage sites",
-    category: "monuments",
-    items: Array(30)
-      .fill(null)
-      .map((_, i) => ({
-        id: `${i}`,
-        title: `Monument ${i + 1}`,
-        description: "Visit",
-        points: 120,
-        completed: false,
-        difficulty: "medium",
-      })),
-    isFollowing: false,
-    followers: 1567,
-    createdBy: "History Buffs",
-    isPublic: true,
-  },
-  {
-    id: "6",
-    name: "Billboard Hot 100 Classics",
-    description: "Listen to the 100 greatest songs ever made",
-    category: "songs",
-    items: Array(100)
-      .fill(null)
-      .map((_, i) => ({
-        id: `${i}`,
-        title: `Song ${i + 1}`,
-        description: "Listen",
-        points: 30,
-        completed: false,
-        difficulty: "easy",
-      })),
-    isFollowing: false,
-    followers: 2234,
-    createdBy: "Music Enthusiasts",
-    isPublic: true,
-  },
-  {
-    id: "7",
-    name: "Random Acts of Kindness",
-    description: "Perform 100 acts of service and kindness",
-    category: "acts-of-service",
-    items: Array(100)
-      .fill(null)
-      .map((_, i) => ({
-        id: `${i}`,
-        title: `Act ${i + 1}`,
-        description: "Do good",
-        points: 25,
-        completed: false,
-        difficulty: "easy",
-      })),
-    isFollowing: false,
-    followers: 4120,
-    createdBy: "Good Samaritans",
-    isPublic: true,
-  },
-  {
-    id: "8",
-    name: "Life Achievements",
-    description: "Accomplish 50 personal and professional goals",
-    category: "miscellaneous",
-    items: Array(50)
-      .fill(null)
-      .map((_, i) => ({
-        id: `${i}`,
-        title: `Goal ${i + 1}`,
-        description: "Achieve",
-        points: 200,
-        completed: false,
-        difficulty: "hard",
-      })),
-    isFollowing: false,
-    followers: 1298,
-    createdBy: "Goal Setters",
-    isPublic: true,
-  },
-]
+import { formatErrorMessage } from "@/lib/error-handler"
 
 export default function ExplorePage() {
+  const { user } = useAuth()
   const [selectedCategory, setSelectedCategory] = useState<Category | "all">("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState<"popular" | "new" | "points" | "a-z">("popular")
+  const [activeTab, setActiveTab] = useState<"all" | "trending">("all")
+  const [page, setPage] = useState(0)
+  const pageSize = 20
+
+  // Use SWR hooks for data fetching with caching
+  const { bucketLists: searchResults, isLoading: searchLoading, isError: searchError } = useSearchBucketLists(
+    searchQuery,
+    selectedCategory !== "all" ? selectedCategory : undefined,
+    user?.id
+  )
+
+  const {
+    bucketLists: publicLists,
+    hasMore: publicHasMore,
+    isLoading: publicLoading,
+    isError: publicError
+  } = usePublicBucketLists(
+    selectedCategory !== "all" ? selectedCategory : undefined,
+    user?.id,
+    page,
+    pageSize
+  )
+
+  const { bucketLists: trendingLists, isLoading: trendingLoading, isError: trendingError } = useTrendingBucketLists(
+    user?.id,
+    20
+  )
+
+  // Determine which data to use
+  const bucketLists = searchQuery.trim() ? searchResults : publicLists
+  const loading = searchQuery.trim() ? searchLoading : publicLoading
+  const error = searchQuery.trim() ? searchError : publicError
+  const hasMore = searchQuery.trim() ? false : publicHasMore
+
+  // Reset page when filters change
+  const handleCategoryChange = (category: Category | "all") => {
+    setSelectedCategory(category)
+    setPage(0)
+  }
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query)
+    setPage(0)
+  }
+
+  const convertToDisplayFormat = (list: BucketListWithItems & { isFollowing?: boolean }): BucketList => {
+    return {
+      id: list.id,
+      name: list.name,
+      description: list.description || "",
+      category: list.category,
+      items: list.bucket_items.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || "",
+        points: item.points,
+        difficulty: item.difficulty || undefined,
+        location: item.location || undefined,
+        completed: item.completed,
+        completedDate: item.completed_date || undefined,
+      })),
+      isFollowing: list.isFollowing || false,
+      followers: list.follower_count,
+      createdBy: list.profiles.username,
+      isPublic: list.is_public,
+    }
+  }
 
   const filteredAndSortedLists = useMemo(() => {
-    const filtered = allAvailableLists.filter((list) => {
-      const matchesCategory = selectedCategory === "all" || list.category === selectedCategory
-      const matchesSearch =
-        list.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        list.description.toLowerCase().includes(searchQuery.toLowerCase())
-      return matchesCategory && matchesSearch
-    })
-
-    const sorted = [...filtered].sort((a, b) => {
+    const listsToSort = activeTab === "trending" ? (trendingLists || []) : (bucketLists || [])
+    const sorted = [...listsToSort].sort((a, b) => {
       switch (sortBy) {
         case "popular":
-          return b.followers - a.followers
+          return b.follower_count - a.follower_count
         case "new":
-          return 0 // In real app, would use createdDate
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         case "points":
-          return b.items.reduce((sum, i) => sum + i.points, 0) - a.items.reduce((sum, i) => sum + i.points, 0)
+          return (
+            b.bucket_items.reduce((sum, i) => sum + i.points, 0) -
+            a.bucket_items.reduce((sum, i) => sum + i.points, 0)
+          )
         case "a-z":
           return a.name.localeCompare(b.name)
         default:
@@ -201,50 +106,80 @@ export default function ExplorePage() {
       }
     })
 
-    return sorted
-  }, [selectedCategory, searchQuery, sortBy])
+    return sorted.map(convertToDisplayFormat)
+  }, [bucketLists, trendingLists, sortBy, activeTab])
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-10">
           <h1 className="font-display text-4xl font-bold mb-2">Explore Bucket Lists</h1>
           <p className="text-lg text-muted-foreground">Discover curated lists and find your next adventure</p>
         </div>
 
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "all" | "trending")} className="mb-8">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="all">All Lists</TabsTrigger>
+            <TabsTrigger value="trending">Trending 🔥</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         {/* Search Bar */}
-        <div className="mb-8">
-          <Input
-            placeholder="Search lists by name or description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-11"
-          />
-        </div>
+        {activeTab === "all" && (
+          <div className="mb-8">
+            <Input
+              placeholder="Search lists by name or description..."
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="h-11"
+            />
+          </div>
+        )}
 
         {/* Category Filter */}
-        <div className="mb-8 pb-6 border-b border-border">
-          <h2 className="font-display text-sm font-semibold mb-4 text-muted-foreground uppercase">Categories</h2>
-          <CategoryFilter selected={selectedCategory} onChange={setSelectedCategory} />
-        </div>
+        {activeTab === "all" && (
+          <div className="mb-8 pb-6 border-b border-border">
+            <h2 className="font-display text-sm font-semibold mb-4 text-muted-foreground uppercase">Categories</h2>
+            <CategoryFilter selected={selectedCategory} onChange={handleCategoryChange} />
+          </div>
+        )}
 
         {/* Sort and Results Header */}
         <div className="flex items-center justify-between mb-6">
           <p className="text-sm text-muted-foreground">
-            Showing {filteredAndSortedLists.length} list{filteredAndSortedLists.length !== 1 ? "s" : ""}
+            {activeTab === "trending" && trendingLoading ? (
+              "Loading trending lists..."
+            ) : (
+              <>
+                Showing {filteredAndSortedLists.length} list{filteredAndSortedLists.length !== 1 ? "s" : ""}
+                {activeTab === "trending" && " (from last 30 days)"}
+              </>
+            )}
           </p>
           <SortMenu selected={sortBy} onChange={setSortBy} />
         </div>
 
         {/* Lists Grid */}
-        {filteredAndSortedLists.length === 0 ? (
+        {(loading || (activeTab === "trending" && trendingLoading)) ? (
+          <div className="text-center py-20">
+            <p className="text-xl text-muted-foreground">Loading bucket lists...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-20">
+            <p className="text-xl text-destructive mb-4">{formatErrorMessage(error)}</p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Retry
+            </Button>
+          </div>
+        ) : filteredAndSortedLists.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-xl text-muted-foreground mb-4">No lists found matching your criteria</p>
             <Button
               onClick={() => {
-                setSearchQuery("")
-                setSelectedCategory("all")
+                handleSearchChange("")
+                handleCategoryChange("all")
               }}
               variant="outline"
             >
@@ -254,8 +189,34 @@ export default function ExplorePage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredAndSortedLists.map((list) => (
-              <ListCard key={list.id} list={list} />
+              <ListCard
+                key={list.id}
+                list={list}
+              />
             ))}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && !error && activeTab === "all" && !searchQuery.trim() && (
+          <div className="flex justify-center gap-4 mt-8">
+            <Button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              variant="outline"
+            >
+              Previous
+            </Button>
+            <span className="flex items-center px-4 text-sm text-muted-foreground">
+              Page {page + 1}
+            </span>
+            <Button
+              onClick={() => setPage(p => p + 1)}
+              disabled={!hasMore}
+              variant="outline"
+            >
+              Next
+            </Button>
           </div>
         )}
       </div>

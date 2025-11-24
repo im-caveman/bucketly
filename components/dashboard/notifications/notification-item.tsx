@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -13,21 +14,27 @@ interface NotificationItemProps {
 }
 
 export default function NotificationItem({ notification, onMarkAsRead, onDelete }: NotificationItemProps) {
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(diff / 3600000)
+  const [formattedTime, setFormattedTime] = useState<string>("")
 
-    if (minutes < 60) {
-      return `${minutes}m ago`
-    } else if (hours < 24) {
-      return `${hours}h ago`
-    } else {
-      return date.toLocaleDateString()
+  useEffect(() => {
+    const formatTimestamp = (timestamp: string) => {
+      const date = new Date(timestamp)
+      const now = new Date()
+      const diff = now.getTime() - date.getTime()
+      const minutes = Math.floor(diff / 60000)
+      const hours = Math.floor(diff / 3600000)
+
+      if (minutes < 60) {
+        return `${minutes}m ago`
+      } else if (hours < 24) {
+        return `${hours}h ago`
+      } else {
+        return date.toLocaleDateString()
+      }
     }
-  }
+
+    setFormattedTime(formatTimestamp(notification.timestamp))
+  }, [notification.timestamp])
 
   const getTypeColor = (type: Notification["type"]) => {
     switch (type) {
@@ -105,7 +112,7 @@ export default function NotificationItem({ notification, onMarkAsRead, onDelete 
               </div>
               <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
               <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-muted-foreground">{formatTimestamp(notification.timestamp)}</span>
+                <span className="text-xs text-muted-foreground">{formattedTime}</span>
               </div>
             </div>
           </div>

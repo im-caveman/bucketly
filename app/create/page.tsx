@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { WizardStep } from "@/components/bucket-list/wizard-step"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -10,7 +11,13 @@ import { Switch } from "@/components/ui/switch"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
+import { supabase } from "@/lib/supabase"
 import type { Category } from "@/types/bucket-list"
+import { validateListName, validateCategory, validateItemTitle, validatePoints } from "@/lib/validation"
+import { handleSupabaseError, formatErrorMessage } from "@/lib/error-handler"
+import { useAdmin } from "@/hooks/use-admin"
 
 interface ListItem {
   id: string
@@ -83,11 +90,15 @@ const availableItems: ListItem[] = [
 ]
 
 export default function CreateListPage() {
+  const router = useRouter()
+  const { toast } = useToast()
+  const { user } = useAuth()
+  const { isAdmin } = useAdmin()
   const [step, setStep] = useState(1)
   const [listName, setListName] = useState("")
   const [listCategory, setListCategory] = useState<Category>("miscellaneous")
   const [description, setDescription] = useState("")
-  const [isPublic, setIsPublic] = useState(true)
+  const [isPublic, setIsPublic] = useState(false) // Default to private for non-admin users
   const [selectedItems, setSelectedItems] = useState<ListItem[]>([])
   const [customItems, setCustomItems] = useState<CustomListItem[]>([])
   const [addMode, setAddMode] = useState<"search" | "custom">("search")
@@ -96,6 +107,9 @@ export default function CreateListPage() {
   const [customItemDifficulty, setCustomItemDifficulty] = useState<"easy" | "medium" | "hard">("easy")
   const [searchQuery, setSearchQuery] = useState("")
   const [itemOrder, setItemOrder] = useState<(ListItem | CustomListItem)[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<{ name?: string; category?: string }>({})
+
 
   const totalPoints = useMemo(() => {
     return selectedItems.reduce((sum, item) => sum + item.points, 0)
@@ -110,37 +124,140 @@ export default function CreateListPage() {
   }
 
   const handleAddCustomItem = () => {
-    if (customItemTitle.trim()) {
-      const newItem: CustomListItem = {
-        id: `custom-${Date.now()}`,
-        title: customItemTitle,
-        description: customItemDesc,
-        difficulty: customItemDifficulty,
+    const titleValidation = validateItemTitle(customItemTitle)
+    if (!titleValidation.isValid) {
+      toast({
+        title: "Validation Error",
+        description: titleValidation.error,
+        variant: "destructive",
+      })
+      return
+    }
+
+    const newItem: CustomListItem = {
+      id: `custom-${Date.now()}`,
+      title: customItemTitle,
+      description: customItemDesc,
+      difficulty: customItemDifficulty,
+    }
+    setCustomItems([...customItems, newItem])
+    setCustomItemTitle("")
+    setCustomItemDesc("")
+    setCustomItemDifficulty("easy")
+  }
+
+  const validateStep1 = () => {
+    const errors: { name?: string; category?: string } = {}
+
+    const nameValidation = validateListName(listName)
+    if (!nameValidation.isValid) {
+      errors.name = nameValidation.error
+    }
+
+    const categoryValidation = validateCategory(listCategory)
+    if (!categoryValidation.isValid) {
+      errors.category = categoryValidation.error
+    }
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleCreateList = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to create a bucket list",
+        variant: "destructive",
+      })
+      router.push("/auth/login")
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      // Insert bucket list
+      const { data: bucketList, error: listError } = await supabase
+        .from("bucket_lists")
+        .insert({
+          user_id: user.id,
+          name: listName.trim(),
+          description: description.trim() || null,
+          category: listCategory,
+          is_public: isPublic,
+        })
+        .select()
+        .single()
+
+      if (listError) {
+        throw listError
       }
-      setCustomItems([...customItems, newItem])
-      setCustomItemTitle("")
-      setCustomItemDesc("")
-      setCustomItemDifficulty("easy")
+
+      // Insert bucket items
+      if (itemOrder.length > 0) {
+        const itemsToInsert = itemOrder.map((item) => ({
+          bucket_list_id: bucketList.id,
+          title: item.title,
+          description: item.description || null,
+          points: "points" in item ? item.points : 50,
+          difficulty: item.difficulty || null,
+          location: "location" in item ? item.location : null,
+        }))
+
+        const { error: itemsError } = await supabase
+          .from("bucket_items")
+          .insert(itemsToInsert)
+
+        if (itemsError) {
+          throw itemsError
+        }
+      }
+
+      // Create timeline event
+      await supabase.from("timeline_events").insert({
+        user_id: user.id,
+        event_type: "list_created",
+        title: `Created: ${listName}`,
+        description: `Started a new ${listCategory} bucket list`,
+        metadata: {
+          list_id: bucketList.id,
+          category: listCategory,
+          items_count: itemOrder.length,
+        },
+        is_public: isPublic,
+      })
+
+      toast({
+        title: "Success!",
+        description: "Your bucket list has been created",
+      })
+
+      router.push(`/list/${bucketList.id}`)
+    } catch (error: any) {
+      const apiError = handleSupabaseError(error)
+      toast({
+        title: "Error",
+        description: formatErrorMessage(apiError),
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleNext = () => {
     if (step === 1) {
-      if (listName.trim()) setStep(2)
+      if (validateStep1()) {
+        setStep(2)
+      }
     } else if (step === 2) {
       if (selectedItems.length > 0 || customItems.length > 0) {
         setItemOrder([...selectedItems, ...customItems])
         setStep(3)
       }
     } else if (step === 3) {
-      // Submit list creation
-      console.log("[v0] Creating list:", {
-        name: listName,
-        category: listCategory,
-        description,
-        isPublic,
-        items: itemOrder,
-      })
+      handleCreateList()
     }
   }
 
@@ -156,7 +273,7 @@ export default function CreateListPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="font-display text-3xl font-bold mb-2">Create Your Bucket List</h1>
           <p className="text-lg text-muted-foreground">Build a personalized list and start your journey</p>
@@ -168,7 +285,7 @@ export default function CreateListPage() {
             title="Basic Information"
             description="Give your list a name and choose a category"
             onNext={handleNext}
-            onBack={() => {}}
+            onBack={() => { }}
             isLastStep={false}
             isNextDisabled={!isStep1Valid}
           >
@@ -181,9 +298,17 @@ export default function CreateListPage() {
                   id="name"
                   placeholder="e.g., Travel the World"
                   value={listName}
-                  onChange={(e) => setListName(e.target.value)}
+                  onChange={(e) => {
+                    setListName(e.target.value)
+                    if (validationErrors.name) {
+                      setValidationErrors({ ...validationErrors, name: undefined })
+                    }
+                  }}
                   className="h-11"
                 />
+                {validationErrors.name && (
+                  <p className="text-sm text-destructive mt-1">{validationErrors.name}</p>
+                )}
               </div>
 
               <div>
@@ -193,11 +318,10 @@ export default function CreateListPage() {
                     <button
                       key={cat.id}
                       onClick={() => setListCategory(cat.id as Category)}
-                      className={`p-3 rounded-lg border-2 transition-all text-left ${
-                        listCategory === cat.id
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover:border-primary/50"
-                      }`}
+                      className={`p-3 rounded-lg border-2 transition-all text-left ${listCategory === cat.id
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-primary/50"
+                        }`}
                     >
                       <span className="text-2xl">{cat.icon}</span>
                       <p className="font-semibold mt-1">{cat.label}</p>
@@ -219,13 +343,15 @@ export default function CreateListPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div>
-                  <p className="font-semibold">Make Public</p>
-                  <p className="text-sm text-muted-foreground">Others can find and follow your list</p>
+              {isAdmin && (
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div>
+                    <p className="font-semibold">Make Public</p>
+                    <p className="text-sm text-muted-foreground">Others can find and follow your list</p>
+                  </div>
+                  <Switch checked={isPublic} onCheckedChange={setIsPublic} />
                 </div>
-                <Switch checked={isPublic} onCheckedChange={setIsPublic} />
-              </div>
+              )}
             </div>
           </WizardStep>
         )}
@@ -280,7 +406,7 @@ export default function CreateListPage() {
                               <input
                                 type="checkbox"
                                 checked={selectedItems.some((i) => i.id === item.id)}
-                                onChange={() => {}}
+                                onChange={() => { }}
                                 className="w-5 h-5"
                               />
                             </div>
@@ -367,6 +493,7 @@ export default function CreateListPage() {
             onBack={() => setStep(2)}
             isLastStep={true}
             isNextDisabled={!isStep3Valid}
+            isLoading={isSubmitting}
           >
             <div className="space-y-6">
               <Card>

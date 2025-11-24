@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Bullet } from "@/components/ui/bullet";
 import { AnimatePresence, motion, PanInfo } from "motion/react";
@@ -8,9 +8,16 @@ import NotificationItem from "./notification-item";
 import type { Notification } from "@/types/dashboard";
 import { SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useIsV0 } from "@/lib/v0-context";
+import { useAuth } from "@/contexts/auth-context";
+import {
+  fetchUserNotifications,
+  subscribeToNotifications,
+  markNotificationAsRead,
+  deleteNotification,
+} from "@/lib/notification-service";
 
 interface MobileNotificationsProps {
-  initialNotifications: Notification[];
+  initialNotifications?: Notification[];
 }
 
 interface SwipeableWrapperProps {
@@ -50,23 +57,87 @@ function SwipeableWrapper({ children, onDelete }: SwipeableWrapperProps) {
 }
 
 export default function MobileNotifications({
-  initialNotifications,
+  initialNotifications = [],
 }: MobileNotificationsProps) {
-  const [notifications, setNotifications] =
-    useState<Notification[]>(initialNotifications);
-
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const [isLoading, setIsLoading] = useState(true);
   const isV0 = useIsV0();
+
+  // Fetch notifications on mount
+  useEffect(() => {
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    async function loadNotifications() {
+      try {
+        const fetchedNotifications = await fetchUserNotifications(user.id);
+        setNotifications(fetchedNotifications);
+      } catch (error) {
+        console.error('Error loading notifications:', error);
+        setNotifications(initialNotifications);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadNotifications();
+  }, [user?.id]);
+
+  // Subscribe to real-time notification updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = subscribeToNotifications(user.id, (newNotification) => {
+      setNotifications((prev) => {
+        const exists = prev.some((n) => n.id === newNotification.id);
+        if (exists) {
+          return prev.map((n) =>
+            n.id === newNotification.id ? newNotification : n
+          );
+        }
+        return [newNotification, ...prev];
+      });
+    });
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [user?.id]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
+    if (!user?.id) return;
+
     setNotifications((prev) =>
       prev.map((notif) => (notif.id === id ? { ...notif, read: true } : notif))
     );
+
+    try {
+      await markNotificationAsRead(id, user.id);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      setNotifications((prev) =>
+        prev.map((notif) => (notif.id === id ? { ...notif, read: false } : notif))
+      );
+    }
   };
 
-  const deleteNotification = (id: string) => {
+  const handleDeleteNotification = async (id: string) => {
+    if (!user?.id) return;
+
     setNotifications((prev) => prev.filter((notif) => notif.id !== id));
+
+    try {
+      await deleteNotification(id, user.id);
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      const fetchedNotifications = await fetchUserNotifications(user.id);
+      setNotifications(fetchedNotifications);
+    }
   };
 
   return (
@@ -94,9 +165,13 @@ export default function MobileNotifications({
 
       {/* Notifications List */}
       <div className="flex-1 overflow-y-auto overflow-x-clip p-2 space-y-2 bg-muted">
-        {notifications.length === 0 ? (
+        {isLoading ? (
           <div className="flex items-center justify-center h-32">
-            <p className="text-sm text-muted-foreground">No notifications</p>
+            <p className="text-sm text-muted-foreground">Loading notifications...</p>
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="flex items-center justify-center h-32">
+            <p className="text-sm text-foreground/80 font-medium">No notifications</p>
           </div>
         ) : (
           <AnimatePresence mode={isV0 ? "wait" : "popLayout"}>
@@ -115,12 +190,12 @@ export default function MobileNotifications({
                 }}
               >
                 <SwipeableWrapper
-                  onDelete={() => deleteNotification(notification.id)}
+                  onDelete={() => handleDeleteNotification(notification.id)}
                 >
                   <NotificationItem
                     notification={notification}
                     onMarkAsRead={markAsRead}
-                    onDelete={deleteNotification}
+                    onDelete={handleDeleteNotification}
                   />
                 </SwipeableWrapper>
               </motion.div>

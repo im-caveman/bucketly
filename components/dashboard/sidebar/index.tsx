@@ -26,10 +26,15 @@ import TimelineIcon from "@/components/icons/timeline"
 import HeartIcon from "@/components/icons/heart"
 import PlusCircleIcon from "@/components/icons/plus-circle"
 import GearIcon from "@/components/icons/gear"
+import ShieldIcon from "@/components/icons/shield"
 import MonkeyIcon from "@/components/icons/monkey"
 import DotsVerticalIcon from "@/components/icons/dots-vertical"
 import { Bullet } from "@/components/ui/bullet"
-import Image from "next/image"
+import { useAuth } from "@/contexts/auth-context"
+import { useAdmin } from "@/hooks/use-admin"
+import { fetchUserProfile, subscribeToProfileUpdates, type UserProfile } from "@/lib/bucket-list-service"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { useEffect, useState } from "react"
 
 const data = {
   navMain: [
@@ -78,6 +83,31 @@ const data = {
 
 export function DashboardSidebar({ className, ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const { user } = useAuth()
+  const { isAdmin } = useAdmin()
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+
+  useEffect(() => {
+    async function loadProfile() {
+      if (user?.id) {
+        const profile = await fetchUserProfile(user.id)
+        setUserProfile(profile)
+      }
+    }
+    loadProfile()
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!userProfile?.id) return
+
+    const channel = subscribeToProfileUpdates(userProfile.id, (updatedProfile) => {
+      setUserProfile(updatedProfile)
+    })
+
+    return () => {
+      channel.unsubscribe()
+    }
+  }, [userProfile?.id])
 
   return (
     <Sidebar {...props} className={cn("py-sides", className)}>
@@ -110,6 +140,17 @@ export function DashboardSidebar({ className, ...props }: React.ComponentProps<t
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
+                {/* Admin Panel - only show for admin users */}
+                {isAdmin && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === "/admin"}>
+                      <Link href="/admin">
+                        <ShieldIcon className="size-5" />
+                        <span>Admin Panel</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -128,19 +169,16 @@ export function DashboardSidebar({ className, ...props }: React.ComponentProps<t
                 <Popover>
                   <PopoverTrigger className="flex gap-0.5 w-full cursor-pointer">
                     <div className="shrink-0 flex size-14 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground overflow-clip">
-                      <Image
-                        src={data.user.avatar || "/placeholder.svg"}
-                        alt={data.user.name}
-                        width={120}
-                        height={120}
-                      />
+                      <Avatar className="h-full w-full rounded-lg">
+                        <AvatarImage src={userProfile?.avatar_url || ''} alt={userProfile?.username} className="object-cover rounded-lg" />
+                        <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-lg rounded-lg">
+                          {userProfile?.username?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                     </div>
                     <div className="pl-3 pr-1.5 pt-2 pb-1.5 flex-1 flex bg-sidebar-accent hover:bg-sidebar-accent-active/75 items-center rounded data-[state=open]:bg-sidebar-accent-active data-[state=open]:hover:bg-sidebar-accent-active data-[state=open]:text-sidebar-accent-foreground">
                       <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate text-xl font-display">{data.user.name}</span>
-                        <span className="truncate text-xs uppercase opacity-50 hover:opacity-100">
-                          {data.user.email}
-                        </span>
+                        <span className="truncate text-xl font-display">{userProfile?.username || 'Loading...'}</span>
                       </div>
                       <DotsVerticalIcon className="ml-auto size-4" />
                     </div>
