@@ -60,52 +60,48 @@ export function ListCard({ list, compact = false }: ListCardProps) {
 
   return (
     <Link href={`/list/${list.id}`} className="block h-full">
-      <Card className="h-full min-h-[360px] overflow-hidden transition-all duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/10 flex flex-col">
-        <CardHeader className="pb-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <CardTitle className="truncate font-display text-2xl font-semibold mb-3 hover:text-primary transition-colors">
-                {list.name}
-              </CardTitle>
-              <CardDescription className="line-clamp-3 text-base leading-relaxed min-h-[3.5rem]">
-                {list.description}
-              </CardDescription>
-            </div>
-          </div>
+      <Card className="h-full overflow-hidden transition-all duration-300 hover:border-primary hover:shadow-lg hover:shadow-primary/10 flex flex-col">
+        <CardHeader className="h-auto pb-0">
+          <CardTitle className="font-display text-lg font-semibold line-clamp-2 hover:text-primary transition-colors">
+            {list.name}
+          </CardTitle>
+          <CardDescription className="line-clamp-2 leading-snug">
+            {list.description}
+          </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-3 flex-1 flex flex-col">
+        <CardContent className="flex-1 flex flex-col justify-between gap-3">
           {/* Progress Section */}
-          <div className="space-y-2">
-            <div className="progress-bar h-2">
+          <div className="space-y-1.5">
+            <div className="progress-bar">
               <div className="progress-bar-fill" style={{ width: `${Math.max(percentage, 0)}%` }} />
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground font-medium">
-                {completed}/{total} items completed
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">
+                {completed}/{total} completed
               </span>
               <span className="font-semibold text-primary">{percentage}%</span>
             </div>
           </div>
 
           {/* Stats Section */}
-          <div className="space-y-1.5 py-2 border-y border-border/50">
-            <div className="flex items-center justify-between text-sm">
+          <div className="space-y-1 py-2 border-y border-border/50">
+            <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Followers</span>
               <span className="font-semibold text-foreground">{followerCount.toLocaleString()}</span>
             </div>
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Total Points</span>
               <span className="font-semibold text-primary">{totalPoints.toLocaleString()} pts</span>
             </div>
-            <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Created by</span>
-              <span className="font-medium text-foreground">{list.createdBy}</span>
+              <span className="font-medium text-foreground truncate ml-2">{list.createdBy}</span>
             </div>
           </div>
 
           {/* Follow Button */}
-          <Button onClick={handleFollowToggle} variant={isFollowing ? "default" : "outline"} className="w-full mt-4">
+          <Button onClick={handleFollowToggle} variant={isFollowing ? "default" : "outline"} className="w-full mt-auto" size="sm">
             {isFollowing ? "Following" : "Follow List"}
           </Button>
         </CardContent>
