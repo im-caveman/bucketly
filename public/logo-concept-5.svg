@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="gradWolf" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366F1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Wolf Head Silhouette -->
+  <path d="M128 96 L192 224 L256 160 L320 224 L384 96 L416 160 L352 416 H160 L96 160 Z" fill="url(#gradWolf)" />
+  
+  <!-- Inner Details for Geometric Look -->
+  <path d="M256 416 V160 L192 224 L160 416 Z" fill="#4338CA" opacity="0.5" />
+  <path d="M256 416 V160 L320 224 L352 416 Z" fill="#4F46E5" opacity="0.3" />
+  
+  <!-- Eyes -->
+  <path d="M192 256 L224 272 L192 288 Z" fill="#FFFFFF" />
+  <path d="M320 256 L288 272 L320 288 Z" fill="#FFFFFF" />
+</svg>

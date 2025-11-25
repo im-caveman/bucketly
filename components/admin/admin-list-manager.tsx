@@ -5,9 +5,11 @@ import { usePublicBucketLists } from "@/hooks/use-bucket-lists"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Trash2, Eye } from "lucide-react"
+import { Loader2, Trash2, Eye, Pencil } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { toast } from "sonner"
+import { AdminListCreator } from "./admin-list-creator"
+import type { BucketListWithItems } from "@/lib/bucket-list-service"
 import {
     AlertDialog,
     AlertDialogAction,
@@ -23,6 +25,7 @@ export function AdminListManager() {
     const { bucketLists, isLoading, isError, mutate } = usePublicBucketLists()
     const [deletingId, setDeletingId] = useState<string | null>(null)
     const [listToDelete, setListToDelete] = useState<string | null>(null)
+    const [editingList, setEditingList] = useState<BucketListWithItems | null>(null)
 
     const handleDelete = async (listId: string) => {
         setDeletingId(listId)
@@ -62,6 +65,24 @@ export function AdminListManager() {
                 <Button onClick={() => mutate()} variant="outline">
                     Retry
                 </Button>
+            </div>
+        )
+    }
+
+    if (editingList) {
+        return (
+            <div className="space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold">Edit List: {editingList.name}</h3>
+                </div>
+                <AdminListCreator
+                    initialData={editingList}
+                    onSuccess={() => {
+                        setEditingList(null)
+                        mutate()
+                    }}
+                    onCancel={() => setEditingList(null)}
+                />
             </div>
         )
     }
@@ -120,6 +141,14 @@ export function AdminListManager() {
                                         </Button>
 
                                         <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setEditingList(list)}
+                                        >
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+
+                                        <Button
                                             variant="destructive"
                                             size="sm"
                                             onClick={() => setListToDelete(list.id)}
@@ -162,3 +191,4 @@ export function AdminListManager() {
         </>
     )
 }
+

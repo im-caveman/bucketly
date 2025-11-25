@@ -107,7 +107,7 @@ export function DashboardSidebar({ className, ...props }: React.ComponentProps<t
     <Sidebar {...props} className={cn("py-sides", className)}>
       <SidebarHeader className="rounded-t-lg flex gap-3 flex-row rounded-b-none">
         <div className="flex overflow-clip size-12 shrink-0 items-center justify-center rounded bg-sidebar-primary-foreground/10 hover:bg-sidebar-primary transition-colors text-sidebar-primary-foreground">
-          <MonkeyIcon className="size-10 hover:scale-[1.7] origin-top-left transition-transform" />
+          <img src="/logo.svg" alt="Bucketly" className="size-10 hover:scale-[1.1] transition-transform object-contain" />
         </div>
         <div className="grid flex-1 text-left text-sm leading-tight">
           <span className="text-2xl font-display">Bucketly</span>

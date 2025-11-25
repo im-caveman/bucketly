@@ -1,17 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, Loader2 } from "lucide-react"
+import { Plus, Trash2, Loader2, X } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { toast } from "sonner"
 import type { Category, Difficulty } from "@/types/supabase"
 import { createAdminNotification } from "@/lib/notification-service"
+import type { BucketListWithItems } from "@/lib/bucket-list-service"
 
 interface BucketItemInput {
     id: string
@@ -22,19 +23,57 @@ interface BucketItemInput {
     location: string
 }
 
-export function AdminListCreator() {
+interface AdminListCreatorProps {
+    initialData?: BucketListWithItems
+    onSuccess?: () => void
+    onCancel?: () => void
+}
+
+export function AdminListCreator({ initialData, onSuccess, onCancel }: AdminListCreatorProps) {
     const { user } = useAuth()
-    const [isCreating, setIsCreating] = useState(false)
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     // List details
-    const [listName, setListName] = useState("")
-    const [listDescription, setListDescription] = useState("")
-    const [category, setCategory] = useState<Category | "">("")
+    const [listName, setListName] = useState(initialData?.name || "")
+    const [listDescription, setListDescription] = useState(initialData?.description || "")
+    const [category, setCategory] = useState<Category | "">(initialData?.category || "")
 
     // Items
-    const [items, setItems] = useState<BucketItemInput[]>([
-        { id: crypto.randomUUID(), title: "", description: "", points: 50, difficulty: "", location: "" }
-    ])
+    const [items, setItems] = useState<BucketItemInput[]>(
+        initialData?.bucket_items.map(item => ({
+            id: item.id,
+            title: item.title,
+            description: item.description || "",
+            points: item.points,
+            difficulty: item.difficulty || "",
+            location: item.location || ""
+        })) || [
+            { id: crypto.randomUUID(), title: "", description: "", points: 50, difficulty: "", location: "" }
+        ]
+    )
+
+    // Reset form when initialData changes (e.g. switching between lists)
+    useEffect(() => {
+        if (initialData) {
+            setListName(initialData.name)
+            setListDescription(initialData.description || "")
+            setCategory(initialData.category)
+            setItems(initialData.bucket_items.map(item => ({
+                id: item.id,
+                title: item.title,
+                description: item.description || "",
+                points: item.points,
+                difficulty: item.difficulty || "",
+                location: item.location || ""
+            })))
+        } else {
+            // Reset to default if switching to create mode
+            setListName("")
+            setListDescription("")
+            setCategory("")
+            setItems([{ id: crypto.randomUUID(), title: "", description: "", points: 50, difficulty: "", location: "" }])
+        }
+    }, [initialData])
 
     const addItem = () => {
         setItems([...items, {
@@ -50,6 +89,11 @@ export function AdminListCreator() {
     const removeItem = (id: string) => {
         if (items.length > 1) {
             setItems(items.filter(item => item.id !== id))
+        } else if (items.length === 1 && !initialData) {
+            // If it's the last item and we are creating, just clear it
+            setItems([{ id: crypto.randomUUID(), title: "", description: "", points: 50, difficulty: "", location: "" }])
+        } else if (items.length === 1 && initialData) {
+            toast.error("A list must have at least one item")
         }
     }
 
@@ -63,7 +107,7 @@ export function AdminListCreator() {
         e.preventDefault()
 
         if (!user) {
-            toast.error("You must be logged in to create lists")
+            toast.error("You must be logged in to manage lists")
             return
         }
 
@@ -78,76 +122,158 @@ export function AdminListCreator() {
             return
         }
 
-        setIsCreating(true)
+        setIsSubmitting(true)
 
         try {
-            // Create the bucket list (public by default for admin)
-            const { data: newList, error: listError } = await supabase
-                .from('bucket_lists')
-                .insert({
-                    user_id: user.id,
-                    name: listName.trim(),
-                    description: listDescription.trim() || null,
-                    category: category as Category,
-                    is_public: true, // Admin lists are always public
-                })
-                .select()
-                .single()
+            if (initialData) {
+                // UPDATE EXISTING LIST
+                const { error: listError } = await supabase
+                    .from('bucket_lists')
+                    .update({
+                        name: listName.trim(),
+                        description: listDescription.trim() || null,
+                        category: category as Category,
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', initialData.id)
 
-            if (listError) throw listError
+                if (listError) throw listError
 
-            // Create the bucket items
-            const itemsToInsert = validItems.map(item => ({
-                bucket_list_id: newList.id,
-                title: item.title.trim(),
-                description: item.description.trim() || null,
-                points: item.points,
-                difficulty: item.difficulty || null,
-                location: item.location.trim() || null,
-            }))
+                // Handle Items
+                const originalItemIds = new Set(initialData.bucket_items.map(i => i.id))
 
-            const { error: itemsError } = await supabase
-                .from('bucket_items')
-                .insert(itemsToInsert)
+                // 1. Delete removed items
+                const itemsToDelete = initialData.bucket_items.filter(i => !items.find(currentItem => currentItem.id === i.id))
+                if (itemsToDelete.length > 0) {
+                    const { error: deleteError } = await supabase
+                        .from('bucket_items')
+                        .delete()
+                        .in('id', itemsToDelete.map(i => i.id))
 
-            if (itemsError) throw itemsError
+                    if (deleteError) throw deleteError
+                }
 
-            // Create admin notification for all users
-            try {
-                await createAdminNotification(
-                    `🎉 New Public List: ${listName}`,
-                    `A new ${category} bucket list "${listName}" with ${validItems.length} items has been added! Check it out on the Explore page.`,
-                    'success',
-                    'medium',
-                    {
-                        list_id: newList.id,
-                        list_name: listName,
-                        category: category,
-                        item_count: validItems.length,
-                    }
-                )
-            } catch (notifError) {
-                // Don't fail the list creation if notification fails
-                console.error('Error creating notification:', notifError)
+                // 2. Update existing items
+                const itemsToUpdate = items.filter(i => originalItemIds.has(i.id))
+                for (const item of itemsToUpdate) {
+                    const { error: updateError } = await supabase
+                        .from('bucket_items')
+                        .update({
+                            title: item.title.trim(),
+                            description: item.description.trim() || null,
+                            points: item.points,
+                            difficulty: item.difficulty || null,
+                            location: item.location.trim() || null,
+                            updated_at: new Date().toISOString(),
+                        })
+                        .eq('id', item.id)
+
+                    if (updateError) throw updateError
+                }
+
+                // 3. Insert new items
+                const itemsToInsert = items.filter(i => !originalItemIds.has(i.id))
+                if (itemsToInsert.length > 0) {
+                    const { error: insertError } = await supabase
+                        .from('bucket_items')
+                        .insert(itemsToInsert.map(item => ({
+                            bucket_list_id: initialData.id,
+                            title: item.title.trim(),
+                            description: item.description.trim() || null,
+                            points: item.points,
+                            difficulty: item.difficulty || null,
+                            location: item.location.trim() || null,
+                        })))
+
+                    if (insertError) throw insertError
+                }
+
+                toast.success("List updated successfully")
+                if (onSuccess) onSuccess()
+
+            } else {
+                // CREATE NEW LIST
+                const { data: newList, error: listError } = await supabase
+                    .from('bucket_lists')
+                    .insert({
+                        user_id: user.id,
+                        name: listName.trim(),
+                        description: listDescription.trim() || null,
+                        category: category as Category,
+                        is_public: true, // Admin lists are always public
+                    })
+                    .select()
+                    .single()
+
+                if (listError) throw listError
+
+                // Create the bucket items
+                const itemsToInsert = validItems.map(item => ({
+                    bucket_list_id: newList.id,
+                    title: item.title.trim(),
+                    description: item.description.trim() || null,
+                    points: item.points,
+                    difficulty: item.difficulty || null,
+                    location: item.location.trim() || null,
+                }))
+
+                const { error: itemsError } = await supabase
+                    .from('bucket_items')
+                    .insert(itemsToInsert)
+
+                if (itemsError) throw itemsError
+
+                // Create admin notification
+                try {
+                    await createAdminNotification(
+                        `🎉 New Public List: ${listName}`,
+                        `A new ${category} bucket list "${listName}" with ${validItems.length} items has been added! Check it out on the Explore page.`,
+                        'success',
+                        'medium',
+                        {
+                            list_id: newList.id,
+                            list_name: listName,
+                            category: category,
+                            item_count: validItems.length,
+                        }
+                    )
+                } catch (notifError) {
+                    console.error('Error creating notification:', notifError)
+                }
+
+                toast.success(`Public list "${listName}" created successfully!`)
+
+                // Reset form
+                setListName("")
+                setListDescription("")
+                setCategory("")
+                setItems([{ id: crypto.randomUUID(), title: "", description: "", points: 50, difficulty: "", location: "" }])
+
+                if (onSuccess) onSuccess()
             }
 
-            toast.success(`Public list "${listName}" created successfully!`)
-
-            // Reset form
-            setListName("")
-            setListDescription("")
-            setCategory("")
-            setItems([{ id: crypto.randomUUID(), title: "", description: "", points: 50, difficulty: "", location: "" }])
         } catch (error: any) {
-            console.error('Error creating list:', error)
-            toast.error(error.message || "Failed to create list")
+            console.error('Error saving list:', error)
+            toast.error(error.message || "Failed to save list")
         } finally {
-            setIsCreating(false)
+            setIsSubmitting(false)
         }
     }
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">
+                    {initialData ? "Edit Public List" : "Create New Public List"}
+                </h3>
+                {onCancel && (
+                    <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                    </Button>
+                )}
+            </div>
+
             {/* List Details */}
             <div className="space-y-6">
                 <div className="space-y-2">
@@ -210,17 +336,16 @@ export function AdminListCreator() {
                             <div className="space-y-3">
                                 <div className="flex items-start justify-between gap-2">
                                     <h4 className="font-semibold text-sm">Item {index + 1}</h4>
-                                    {items.length > 1 && (
-                                        <Button
-                                            type="button"
-                                            onClick={() => removeItem(item.id)}
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    )}
+                                    <Button
+                                        type="button"
+                                        onClick={() => removeItem(item.id)}
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                        disabled={items.length === 1 && !!initialData}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
                                 </div>
 
                                 <Input
@@ -284,16 +409,24 @@ export function AdminListCreator() {
                 </div>
             </div>
 
-            <Button type="submit" disabled={isCreating} className="w-full h-11">
-                {isCreating ? (
-                    <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Creating...
-                    </>
-                ) : (
-                    "Create Public List"
+            <div className="flex gap-3">
+                {onCancel && (
+                    <Button type="button" variant="outline" onClick={onCancel} className="flex-1 h-11">
+                        Cancel
+                    </Button>
                 )}
-            </Button>
+                <Button type="submit" disabled={isSubmitting} className="flex-1 h-11">
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            {initialData ? "Updating..." : "Creating..."}
+                        </>
+                    ) : (
+                        initialData ? "Update Public List" : "Create Public List"
+                    )}
+                </Button>
+            </div>
         </form>
     )
 }
+

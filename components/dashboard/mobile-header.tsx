@@ -49,7 +49,7 @@ export function MobileHeader({ mockData }: { mockData: any }) {
               {/* Header */}
               <div className="flex gap-3 p-6 border-b">
                 <div className="flex overflow-clip size-12 shrink-0 items-center justify-center rounded bg-primary/10 text-primary">
-                  <MonkeyIcon className="size-10" />
+                  <Image src="/logo.svg" alt="Bucketly" width={40} height={40} className="size-10 object-contain" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="text-2xl font-display">Bucketly</span>
@@ -117,7 +117,7 @@ export function MobileHeader({ mockData }: { mockData: any }) {
         </Sheet>
 
         <div className="flex items-center gap-2">
-          <MonkeyIcon className="size-8" />
+          <Image src="/logo.svg" alt="Bucketly" width={32} height={32} className="size-8 object-contain" />
           <span className="text-xl font-display">Bucketly</span>
         </div>
       </div>

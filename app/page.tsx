@@ -6,6 +6,7 @@ import dynamic from "next/dynamic"
 import { useAuth } from "@/contexts/auth-context"
 import { Navigation } from "@/components/landing/navigation"
 import { HeroSection } from "@/components/landing/hero-section"
+import { Footer } from "@/components/landing/footer"
 
 // Lazy load below-the-fold components for better performance
 const FeatureGrid = dynamic(() => import("@/components/landing/feature-grid").then(mod => ({ default: mod.FeatureGrid })), {
@@ -90,7 +91,7 @@ export default function LandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      
+
       <div className="min-h-screen bg-background">
         {/* Skip to main content link for keyboard navigation */}
         <a
@@ -99,43 +100,44 @@ export default function LandingPage() {
         >
           Skip to main content
         </a>
-        
+
         <Navigation transparent={true} />
-        
+
         <main id="main-content">
           {/* Hero Section - No animation needed as it's above the fold */}
           <HeroSection onGetStarted={handleGetStarted} onLogin={handleLogin} />
-          
+
           {/* Features Section with scroll animation */}
           <section id="features" className="scroll-mt-20">
             <AnimatedSection>
               <FeatureGrid />
             </AnimatedSection>
           </section>
-          
+
           {/* Stats Section with scroll animation */}
           <AnimatedSection>
             <StatsSection stats={stats} animated={true} />
           </AnimatedSection>
-          
+
           {/* Demo Section with scroll animation */}
           <AnimatedSection>
             <DemoSection />
           </AnimatedSection>
-          
+
           {/* Benefits Section with scroll animation */}
           <section id="about" className="scroll-mt-20">
             <AnimatedSection>
               <BenefitsSection />
             </AnimatedSection>
           </section>
-          
+
           {/* Final CTA Section with scroll animation */}
           <AnimatedSection>
             <FinalCTA onSignUp={handleGetStarted} />
           </AnimatedSection>
         </main>
       </div>
+      <Footer />
     </>
   )
 }
@@ -171,11 +173,10 @@ function AnimatedSection({ children }: { children: React.ReactNode }) {
   return (
     <div
       ref={sectionRef}
-      className={`transition-all duration-700 ease-out ${
-        isVisible
-          ? "opacity-100 translate-y-0"
-          : "opacity-0 translate-y-8"
-      }`}
+      className={`transition-all duration-700 ease-out ${isVisible
+        ? "opacity-100 translate-y-0"
+        : "opacity-0 translate-y-8"
+        }`}
     >
       {children}
     </div>

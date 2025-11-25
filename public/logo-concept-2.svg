@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0EA5E9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Left Vertical Bar / Mountain Side -->
+  <path d="M96 64 V448 H160 V64 H96 Z" fill="#0369A1" />
+  <!-- Top Peak / Loop -->
+  <path d="M160 64 H288 C358.7 64 416 121.3 416 192 C416 240 388 282 348 304" fill="none" stroke="url(#grad2)" stroke-width="64" stroke-linecap="round" />
+  <!-- Bottom Peak / Loop -->
+  <path d="M160 448 H304 C374.7 448 432 390.7 432 320 C432 280 410 245 376 224" fill="none" stroke="url(#grad2)" stroke-width="64" stroke-linecap="round" />
+  <!-- Central Connection (optional for style) -->
+  <circle cx="128" cy="256" r="32" fill="#FFFFFF" />
+</svg>

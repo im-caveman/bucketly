@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="gradEagle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0EA5E9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Geometric Eagle Head -->
+  <path d="M256 64 L128 256 L256 384 L384 256 Z" fill="none" /> <!-- Bounding Diamond -->
+  
+  <!-- Head/Beak -->
+  <path d="M160 192 L352 192 L256 384 Z" fill="url(#gradEagle)" />
+  <path d="M160 192 L256 128 L352 192" fill="#0284C7" /> <!-- Top Head -->
+  <path d="M256 384 L256 256 L352 192" fill="#0369A1" opacity="0.3" /> <!-- Shadow -->
+  
+  <!-- Eye -->
+  <circle cx="224" cy="224" r="16" fill="white" />
+  
+  <!-- Beak Detail -->
+  <path d="M256 384 L288 288 L224 288 Z" fill="#FBBF24" />
+</svg>

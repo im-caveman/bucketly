@@ -196,6 +196,8 @@ export async function createAdminNotification(
   metadata: Record<string, any> = {}
 ): Promise<void> {
   try {
+    console.log('Creating admin notification with params:', { title, message, type, priority, metadata })
+
     const { error } = await supabase.rpc('create_admin_notification', {
       p_title: title,
       p_message: message,
@@ -205,10 +207,14 @@ export async function createAdminNotification(
     })
 
     if (error) {
-      logError(error, { context: 'createAdminNotification', title })
+      console.error('Supabase RPC error:', error)
+      logError(error, { context: 'createAdminNotification', title, params: { title, message, type, priority, metadata } })
       throw handleSupabaseError(error)
     }
+
+    console.log('Admin notification created successfully')
   } catch (error) {
+    console.error('Exception in createAdminNotification:', error)
     logError(error, { context: 'createAdminNotification', title })
     throw handleSupabaseError(error)
   }

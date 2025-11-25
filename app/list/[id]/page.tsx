@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useParams } from "next/navigation"
 import { ItemCard } from "@/components/bucket-list/item-card"
 import { ListProgress } from "@/components/bucket-list/list-progress"
 import { FilterTabs } from "@/components/bucket-list/filter-tabs"
@@ -8,99 +9,44 @@ import { CompletionModal } from "@/components/bucket-list/completion-modal"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-
-// Mock data for a single list
-const mockListDetail = {
-  id: "1",
-  name: "Travel the World",
-  description: "Visit 50 countries and experience different cultures. This is your ultimate journey around the globe.",
-  category: "places" as const,
-  items: [
-    {
-      id: "1",
-      title: "Visit Japan",
-      description: "Experience Tokyo and Kyoto temples",
-      points: 100,
-      completed: true,
-      difficulty: "medium" as const,
-      location: "Japan",
-    },
-    {
-      id: "2",
-      title: "Trek Machu Picchu",
-      description: "Hike to the ancient Incan city",
-      points: 150,
-      completed: true,
-      difficulty: "hard" as const,
-      location: "Peru",
-    },
-    {
-      id: "3",
-      title: "Safari in Kenya",
-      description: "See the Big Five wildlife",
-      points: 120,
-      completed: false,
-      difficulty: "hard" as const,
-      location: "Kenya",
-    },
-    {
-      id: "4",
-      title: "Northern Lights in Iceland",
-      description: "Witness the Aurora Borealis",
-      points: 100,
-      completed: false,
-      difficulty: "medium" as const,
-      location: "Iceland",
-    },
-    {
-      id: "5",
-      title: "Dive the Great Barrier Reef",
-      description: "Explore coral and marine life",
-      points: 110,
-      completed: false,
-      difficulty: "medium" as const,
-      location: "Australia",
-    },
-    {
-      id: "6",
-      title: "Climb Mount Kilimanjaro",
-      description: "Summit Africa's highest peak",
-      points: 200,
-      completed: false,
-      difficulty: "hard" as const,
-      location: "Tanzania",
-    },
-    {
-      id: "7",
-      title: "Explore Petra",
-      description: "Ancient city carved in rose-red stone",
-      points: 90,
-      completed: false,
-      difficulty: "easy" as const,
-      location: "Jordan",
-    },
-    {
-      id: "8",
-      title: "Visit Great Wall of China",
-      description: "Walk the iconic wall",
-      points: 95,
-      completed: false,
-      difficulty: "medium" as const,
-      location: "China",
-    },
-  ],
-  followers: 2450,
-  createdBy: "Global Explorers",
-  isPublic: true,
-}
+import { fetchBucketListById, type BucketListWithItems } from "@/lib/bucket-list-service"
+import { useAuth } from "@/contexts/auth-context"
+import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 export default function ListDetailPage() {
-  const [items, setItems] = useState(mockListDetail.items)
+  const params = useParams()
+  const { user } = useAuth()
+  const [list, setList] = useState<BucketListWithItems & { isFollowing: boolean } | null>(null)
+  const [items, setItems] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<"all" | "completed" | "incomplete">("all")
   const [completionModal, setCompletionModal] = useState<{ isOpen: boolean; item: any | null }>({
     isOpen: false,
     item: null,
   })
+
+  useEffect(() => {
+    async function loadList() {
+      if (!params.id) return
+
+      try {
+        setLoading(true)
+        const data = await fetchBucketListById(params.id as string, user?.id)
+        setList(data)
+        setItems(data.bucket_items || [])
+      } catch (err) {
+        console.error("Error loading list:", err)
+        setError("Failed to load list details")
+        toast.error("Failed to load list details")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadList()
+  }, [params.id, user?.id])
 
   const filteredItems = items.filter((item) => {
     if (filter === "completed") return item.completed
@@ -114,15 +60,19 @@ export default function ListDetailPage() {
 
     if (!item.completed) {
       setCompletionModal({ isOpen: true, item })
+      // Optimistic update
       setItems(items.map((i) => (i.id === id ? { ...i, completed: true } : i)))
     } else {
+      // Optimistic update
       setItems(items.map((i) => (i.id === id ? { ...i, completed: false } : i)))
+      // TODO: Call API to toggle completion
     }
   }
 
   const handleSaveMemory = (memory: { photos: string[]; reflection: string; isPublic: boolean }) => {
     console.log("[v0] Saved memory:", memory)
     setCompletionModal({ isOpen: false, item: null })
+    // TODO: Call API to save memory
   }
 
   const categoryIcons: Record<string, string> = {
@@ -134,6 +84,26 @@ export default function ListDetailPage() {
     monuments: "🏛️",
     "acts-of-service": "🤝",
     miscellaneous: "✨",
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (error || !list) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <h1 className="text-2xl font-bold">List not found</h1>
+        <p className="text-muted-foreground">{error || "The list you are looking for does not exist."}</p>
+        <Link href="/">
+          <Button>Go Home</Button>
+        </Link>
+      </div>
+    )
   }
 
   return (
@@ -150,18 +120,20 @@ export default function ListDetailPage() {
               </Link>
             </div>
             <div className="flex items-center gap-3 mb-3">
-              <span className="text-4xl">{categoryIcons[mockListDetail.category]}</span>
-              <h1 className="font-display text-4xl font-bold">{mockListDetail.name}</h1>
+              <span className="text-4xl">{categoryIcons[list.category] || "✨"}</span>
+              <h1 className="font-display text-4xl font-bold">{list.name}</h1>
             </div>
-            <p className="text-lg text-muted-foreground mb-3">{mockListDetail.description}</p>
+            {list.description && (
+              <p className="text-lg text-muted-foreground mb-3">{list.description}</p>
+            )}
             <div className="flex items-center gap-2">
-              <Badge variant="secondary">{mockListDetail.followers.toLocaleString()} followers</Badge>
-              <Badge variant="outline">Created by {mockListDetail.createdBy}</Badge>
+              <Badge variant="secondary">{list.follower_count.toLocaleString()} followers</Badge>
+              <Badge variant="outline">Created by {list.profiles?.username || "Unknown"}</Badge>
             </div>
           </div>
           <Button size="lg" className="gap-2 shrink-0">
             <span>❤️</span>
-            Follow
+            {list.isFollowing ? "Following" : "Follow"}
           </Button>
         </div>
 

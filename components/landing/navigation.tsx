@@ -39,8 +39,8 @@ export function Navigation({ transparent = false }: NavigationProps) {
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled || !transparent
-          ? "bg-background/80 backdrop-blur-md border-b border-border shadow-sm"
-          : "bg-transparent"
+        ? "bg-background/80 backdrop-blur-md border-b border-border shadow-sm"
+        : "bg-transparent"
         }`}
     >
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
@@ -52,14 +52,14 @@ export function Navigation({ transparent = false }: NavigationProps) {
             aria-label="Bucketly home"
           >
             <Image
-              src="/placeholder-logo.svg"
+              src="/logo.svg"
               alt="Bucketly logo"
-              width={32}
-              height={32}
-              className="w-7 h-7 sm:w-8 sm:h-8"
+              width={40}
+              height={40}
+              className="w-9 h-9 sm:w-10 sm:h-10"
             />
             {/* Font sizes: 18px (mobile) to 24px (desktop) */}
-            <span className="font-display text-lg sm:text-xl md:text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            <span className="font-display text-lg sm:text-xl md:text-2xl font-extrabold text-foreground tracking-tight">
               Bucketly
             </span>
           </Link>

@@ -77,7 +77,7 @@ export function FeatureGrid({ features = defaultFeatures }: FeatureGridProps) {
                 <div className="text-4xl sm:text-5xl" role="img" aria-label={`${feature.title} icon`}>{feature.icon}</div>
 
                 {/* Title - Font sizes: 18px (mobile) to 20px (desktop) */}
-                <h3 className="font-display text-lg sm:text-xl font-semibold text-foreground">
+                < h3 className="font-display text-lg sm:text-xl font-semibold text-foreground" >
                   {feature.title}
                 </h3>
 
@@ -87,9 +87,10 @@ export function FeatureGrid({ features = defaultFeatures }: FeatureGridProps) {
                 </p>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      </div>
-    </section>
+          ))
+          }
+        </div >
+      </div >
+    </section >
   )
 }

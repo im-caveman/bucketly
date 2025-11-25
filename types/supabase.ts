@@ -359,6 +359,55 @@ export interface Database {
           }
         ]
       }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          message: string
+          type: 'info' | 'warning' | 'success' | 'error'
+          priority: 'low' | 'medium' | 'high'
+          read: boolean
+          is_admin_notification: boolean
+          metadata: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          message: string
+          type?: 'info' | 'warning' | 'success' | 'error'
+          priority?: 'low' | 'medium' | 'high'
+          read?: boolean
+          is_admin_notification?: boolean
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          message?: string
+          type?: 'info' | 'warning' | 'success' | 'error'
+          priority?: 'low' | 'medium' | 'high'
+          read?: boolean
+          is_admin_notification?: boolean
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       leaderboard_view: {
@@ -411,6 +460,16 @@ export interface Database {
       }
       handle_new_user: {
         Args: Record<string, never>
+        Returns: void
+      }
+      create_admin_notification: {
+        Args: {
+          p_title: string
+          p_message: string
+          p_type?: string
+          p_priority?: string
+          p_metadata?: Json
+        }
         Returns: void
       }
     }

@@ -192,10 +192,12 @@ export function logError(error: any, context?: Record<string, any>): void {
   if (isDevelopment) {
     console.error('Error occurred:', {
       error: error instanceof Error ? {
-        ...error,
+        name: error.name,
         message: error.message,
-        stack: error.stack
-      } : error,
+        stack: error.stack,
+        // @ts-ignore
+        cause: error.cause
+      } : typeof error === 'object' ? JSON.stringify(error, null, 2) : error,
       context,
       timestamp: new Date().toISOString()
     })

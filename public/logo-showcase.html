@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bucketly Logo Concepts</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #1f2937;
+            margin-bottom: 40px;
+        }
+
+        .container {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 300px;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .logo-container {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        h2 {
+            color: #374151;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #6b7280;
+            font-size: 0.9em;
+        }
+
+        .dark-mode-preview {
+            background-color: #111827;
+            margin-top: 40px;
+            padding: 40px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+        }
+
+        .dark-mode-preview .logo-container {
+            width: 100px;
+            height: 100px;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Bucketly Logo Concepts</h1>
+
+    <div class="container">
+        <div class="card">
+            <div class="logo-container">
+                <img src="logo-concept-4.svg" alt="Concept 4">
+            </div>
+            <h2>Concept 4</h2>
+            <p>Geometric Eagle</p>
+            <p>Sharp, adventurous, triangular form.</p>
+        </div>
+
+        <div class="card">
+            <div class="logo-container">
+                <img src="logo-concept-5.svg" alt="Concept 5">
+            </div>
+            <h2>Concept 5</h2>
+            <p>Geometric Wolf</p>
+            <p>Symbol of instinct and pathfinding.</p>
+        </div>
+
+        <div class="card">
+            <div class="logo-container">
+                <img src="logo-concept-6.svg" alt="Concept 6">
+            </div>
+            <h2>Concept 6</h2>
+            <p>Geometric Fox</p>
+            <p>Agile, vibrant, and clever.</p>
+        </div>
+    </div>
+
+    <div class="dark-mode-preview">
+        <div class="logo-container">
+            <img src="logo-concept-4.svg" alt="Concept 4">
+        </div>
+        <div class="logo-container">
+            <img src="logo-concept-5.svg" alt="Concept 5">
+        </div>
+        <div class="logo-container">
+            <img src="logo-concept-6.svg" alt="Concept 6">
+        </div>
+    </div>
+    <p style="margin-top: 10px; color: #6b7280;">Dark Mode Preview</p>
+</body>
+
+</html>
