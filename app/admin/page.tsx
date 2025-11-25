@@ -9,7 +9,8 @@ import { AdminListManager } from "@/components/admin/admin-list-manager"
 import { AdminNotificationManager } from "@/components/admin/admin-notification-manager"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, ListChecks, Users, Settings, Bell } from "lucide-react"
+import { Loader2, ListChecks, Users, Settings, Bell, Award } from "lucide-react"
+import { AdminBadgeManager } from "@/components/admin/admin-badge-manager"
 
 export default function AdminPage() {
     const { user } = useAuth()
@@ -64,9 +65,9 @@ export default function AdminPage() {
                             <Users className="h-4 w-4" />
                             Users
                         </TabsTrigger>
-                        <TabsTrigger value="settings" className="gap-2">
-                            <Settings className="h-4 w-4" />
-                            Settings
+                        <TabsTrigger value="badges" className="gap-2">
+                            <Award className="h-4 w-4" />
+                            Badges
                         </TabsTrigger>
                     </TabsList>
 
@@ -134,26 +135,20 @@ export default function AdminPage() {
                         </Card>
                     </TabsContent>
 
-                    {/* Settings Tab */}
-                    <TabsContent value="settings" className="mt-6">
+                    {/* Badges Management Tab */}
+                    <TabsContent value="badges" className="mt-6">
                         <Card>
                             <CardHeader className="pb-4 !h-auto min-h-[auto]">
                                 <CardTitle className="flex items-center gap-2 mb-2">
-                                    <Settings className="h-5 w-5" />
-                                    Platform Settings
+                                    <Award className="h-5 w-5" />
+                                    Badge Management
                                 </CardTitle>
                                 <CardDescription className="mt-0 text-sm leading-relaxed">
-                                    Configure global platform settings and preferences
+                                    Create and manage achievement badges
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="pt-4">
-                                <div className="text-center py-12">
-                                    <Settings className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                                    <p className="text-lg font-medium mb-2">Platform Settings</p>
-                                    <p className="text-sm text-muted-foreground">
-                                        Settings configuration coming soon
-                                    </p>
-                                </div>
+                                <AdminBadgeManager />
                             </CardContent>
                         </Card>
                     </TabsContent>

@@ -13,14 +13,18 @@ import {
   deleteNotification,
   deleteAllNotifications,
 } from "@/lib/notification-service"
+import { BadgeIcon } from "./badges/badge-icon"
+import BadgePreview from "./badges"
+import { useUserBadges } from "@/hooks/use-badges"
 
-type ActiveWidget = "notifications" | null
+type ActiveWidget = "notifications" | "badges" | null
 
 export function IconWidgets() {
   const { user } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeWidget, setActiveWidget] = useState<ActiveWidget>(null)
+  const { userBadges } = useUserBadges(user?.id)
 
   // Fetch notifications on mount
   useEffect(() => {
@@ -83,6 +87,11 @@ export function IconWidgets() {
               isActive={activeWidget === "notifications"}
               onClick={() => toggleWidget("notifications")}
             />
+            <BadgeIcon
+              badgeCount={userBadges?.length || 0}
+              isActive={activeWidget === "badges"}
+              onClick={() => toggleWidget("badges")}
+            />
             {/* Add more icon widgets here in the future */}
           </div>
         </CardContent>
@@ -91,6 +100,9 @@ export function IconWidgets() {
       {/* Expandable Content */}
       {activeWidget === "notifications" && (
         <Notifications initialNotifications={notifications} />
+      )}
+      {activeWidget === "badges" && (
+        <BadgePreview />
       )}
     </>
   )

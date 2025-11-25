@@ -87,7 +87,7 @@ export default function RootLayout({
       <head>
         <link rel="preload" href="/fonts/Rebels-Fett.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       </head>
-      <body className={`${rebelGrotesk.variable} ${robotoMono.variable} antialiased`}>
+      <body className={`${rebelGrotesk.variable} ${robotoMono.variable} antialiased`} suppressHydrationWarning>
         <AuthProvider>
           <SWRConfigProvider>
             <V0Provider isV0={isV0}>

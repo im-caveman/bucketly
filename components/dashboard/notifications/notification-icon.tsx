@@ -19,7 +19,7 @@ export function NotificationIcon({
     <Button
       variant={isActive ? "default" : "ghost"}
       size="icon"
-      className="relative"
+      className="relative cursor-pointer"
       onClick={onClick}
     >
       <Bell className="h-5 w-5" />

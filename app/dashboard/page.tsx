@@ -167,7 +167,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-full bg-background">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header Section */}
         <div className="mb-12">
@@ -207,8 +207,8 @@ export default function DashboardPage() {
           {filteredLists.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-lg text-muted-foreground mb-4">
-                {followedLists.length === 0 
-                  ? "You're not following any lists yet" 
+                {followedLists.length === 0
+                  ? "You're not following any lists yet"
                   : "No lists match your search"}
               </p>
               <Link href="/explore">

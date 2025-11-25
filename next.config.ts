@@ -11,10 +11,9 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
   reactStrictMode: true,
-  
+
   // Optimize production builds
-  swcMinify: true,
-  
+
   images: {
     // Enable Next.js automatic image optimization
     unoptimized: false,
@@ -28,9 +27,14 @@ const nextConfig: NextConfig = {
         hostname: '**.supabase.co',
         pathname: '/storage/v1/object/public/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'ui-avatars.com',
+        pathname: '/api/**',
+      },
     ],
   },
-  
+
   // Security Headers
   async headers() {
     return [

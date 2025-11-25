@@ -38,11 +38,10 @@ export function Navigation({ transparent = false }: NavigationProps) {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled || !transparent
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled || !transparent
           ? "bg-background/80 backdrop-blur-md border-b border-border shadow-sm"
           : "bg-transparent"
-      }`}
+        }`}
     >
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         <div className="flex items-center justify-between h-16 md:h-20">
@@ -71,7 +70,7 @@ export function Navigation({ transparent = false }: NavigationProps) {
               <button
                 key={link.href}
                 onClick={() => scrollToSection(link.href.substring(1))}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background rounded-md"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background rounded-md cursor-pointer"
                 aria-label={`Navigate to ${link.label} section`}
               >
                 {link.label}
@@ -96,7 +95,7 @@ export function Navigation({ transparent = false }: NavigationProps) {
           {/* Mobile Menu Button - 44x44px touch target */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 text-foreground hover:text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+            className="md:hidden p-2 text-foreground hover:text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background cursor-pointer"
             aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={isMobileMenuOpen}
             aria-controls="mobile-menu"
@@ -118,7 +117,7 @@ export function Navigation({ transparent = false }: NavigationProps) {
                 <button
                   key={link.href}
                   onClick={() => scrollToSection(link.href.substring(1))}
-                  className="block w-full text-left px-4 py-3 text-base font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors rounded-md min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
+                  className="block w-full text-left px-4 py-3 text-base font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors rounded-md min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background cursor-pointer"
                   aria-label={`Navigate to ${link.label} section`}
                 >
                   {link.label}

@@ -20,6 +20,7 @@ import type { UserProfile } from "@/lib/bucket-list-service"
 import { useRouter } from "next/navigation"
 import { validateUsername, validateBio, validateFileSize, validateImageType } from "@/lib/validation"
 import { handleSupabaseError, formatErrorMessage } from "@/lib/error-handler"
+import { useUserProfile } from "@/hooks/use-profile"
 
 const AVAILABLE_AVATARS = [
   "/avatars/user_krimson.png",
@@ -31,7 +32,7 @@ const AVAILABLE_AVATARS = [
 export default function SettingsPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const [profile, setProfile] = useState<UserProfile | null>(null)
+  const { profile, mutate } = useUserProfile(user?.id)
   const [loading, setLoading] = useState(true)
 
   const [notifications, setNotifications] = useState({
@@ -60,33 +61,18 @@ export default function SettingsPage() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
 
   useEffect(() => {
-    if (user) {
-      loadProfile()
-    }
-  }, [user])
-
-  const loadProfile = async () => {
-    if (!user) return
-
-    try {
-      setLoading(true)
-      const profileData = await fetchUserProfile(user.id)
-      setProfile(profileData)
-      setUsername(profileData.username)
-      setBio(profileData.bio || "")
-      setAvatar(profileData.avatar_url)
-      setTwitterUrl(profileData.twitter_url || "")
-      setInstagramUrl(profileData.instagram_url || "")
-      setLinkedinUrl(profileData.linkedin_url || "")
-      setGithubUrl(profileData.github_url || "")
-      setWebsiteUrl(profileData.website_url || "")
-    } catch (err) {
-      console.error('Error loading profile:', err)
-      toast.error('Failed to load profile')
-    } finally {
+    if (profile) {
+      setUsername(profile.username)
+      setBio(profile.bio || "")
+      setAvatar(profile.avatar_url)
+      setTwitterUrl(profile.twitter_url || "")
+      setInstagramUrl(profile.instagram_url || "")
+      setLinkedinUrl(profile.linkedin_url || "")
+      setGithubUrl(profile.github_url || "")
+      setWebsiteUrl(profile.website_url || "")
       setLoading(false)
     }
-  }
+  }, [profile])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -111,6 +97,7 @@ export default function SettingsPage() {
       const avatarUrl = await uploadProfileAvatar(user.id, file)
       setAvatar(avatarUrl)
       setIsAvatarDialogOpen(false)
+      await mutate()
       toast.success('Avatar uploaded successfully')
     } catch (err: any) {
       const apiError = handleSupabaseError(err)
@@ -156,7 +143,7 @@ export default function SettingsPage() {
       })
 
       // Reload profile to get updated data
-      await loadProfile()
+      await mutate()
 
       // Redirect to profile page
       router.push(`/profile/${username}`)
@@ -184,7 +171,7 @@ export default function SettingsPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <p className="text-destructive mb-4">Failed to load profile</p>
-          <Button onClick={loadProfile}>Try Again</Button>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
         </div>
       </div>
     )

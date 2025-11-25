@@ -47,8 +47,15 @@ export function useUserFollow(userId: string | undefined) {
         toast.success("Following successfully")
       }
     } catch (error: any) {
-      console.error("Error toggling follow:", error)
-      toast.error(error.message || "Failed to update follow status")
+      // Better error logging and message extraction
+      const errorMessage = error?.message || error?.error_description || error?.msg || "Failed to update follow status"
+      console.error("Error toggling follow:", {
+        message: errorMessage,
+        error: error,
+        userId: userId,
+        isFollowing: isFollowing
+      })
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }

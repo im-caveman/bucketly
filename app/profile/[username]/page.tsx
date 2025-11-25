@@ -12,7 +12,10 @@ import { Loader2, Twitter, Instagram, Linkedin, Github, Globe, UserPlus, UserMin
 import { fetchUserProfile, fetchUserBucketLists, fetchUserTimeline } from "@/lib/bucket-list-service"
 import type { UserProfile } from "@/lib/bucket-list-service"
 import { useUserFollow } from "@/hooks/use-user-follow"
+import { useUserBadges } from "@/hooks/use-badges"
 import Link from "next/link"
+import { FollowersDialog } from "@/components/profile/followers-dialog"
+import { UserHoverCard } from "@/components/profile/user-hover-card"
 
 interface ProfilePageProps {
   params: Promise<{
@@ -34,6 +37,8 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   const { isFollowing, isLoading: followLoading, toggleFollow } = useUserFollow(
     isOwnProfile || !profile ? undefined : profile.id
   )
+
+  const { userBadges, isLoading: userBadgesLoading } = useUserBadges(profile?.id)
 
   useEffect(() => {
     fetchProfileData()
@@ -114,15 +119,9 @@ export default function ProfilePage({ params }: ProfilePageProps) {
     { url: profile.website_url, icon: Globe, label: "Website", color: "hover:text-primary" },
   ].filter(link => link.url)
 
-  const achievements = [
-    { id: 1, name: "First Steps", description: "Complete your first item", icon: "🎯", unlocked: true },
-    { id: 2, name: "Social Butterfly", description: "Get 100 followers", icon: "🦋", unlocked: true },
-    { id: 3, name: "Creator", description: "Create your first list", icon: "✨", unlocked: true },
-    { id: 4, name: "Centurion", description: "Complete 100 items", icon: "💯", unlocked: false },
-    { id: 5, name: "Globe Trotter", description: "Visit 25 countries", icon: "🌍", unlocked: false },
-    { id: 6, name: "Legend", description: "Reach top 10 on leaderboard", icon: "👑", unlocked: false },
-  ]
-  const unlockedAchievements = achievements.filter((achievement) => achievement.unlocked).length
+
+
+  const unlockedAchievements = userBadges?.length || 0
 
   return (
     <div className="min-h-screen bg-background">
@@ -138,25 +137,35 @@ export default function ProfilePage({ params }: ProfilePageProps) {
           <Card className="md:col-span-1">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center text-center">
-                <Avatar className="size-24 mb-4 ring-4 ring-primary/20">
-                  <AvatarImage src={profile.avatar_url || ''} alt={profile.username} className="object-cover" />
-                  <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-4xl text-white">
-                    {profile.username.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <h2 className="font-display text-2xl font-bold mb-3">{profile.username}</h2>
+                <UserHoverCard user={profile}>
+                  <Avatar className="size-24 mb-4 ring-4 ring-primary/20 cursor-pointer">
+                    <AvatarImage src={profile.avatar_url || ''} alt={profile.username} className="object-cover" />
+                    <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-4xl text-white">
+                      {profile.username.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </UserHoverCard>
+                <UserHoverCard user={profile}>
+                  <h2 className="font-display text-2xl font-bold mb-3 hover:underline cursor-pointer">{profile.username}</h2>
+                </UserHoverCard>
                 {profile.global_rank && (
                   <Badge className="mb-4">Global Rank #{profile.global_rank}</Badge>
                 )}
 
-                <div className="w-full space-y-2 mb-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total Points</span>
-                    <span className="font-semibold">{profile.total_points.toLocaleString()}</span>
+                <div className="flex items-center justify-center gap-4 w-full mb-6">
+                  <div className="text-center p-2 bg-muted/30 rounded-lg min-w-[80px]">
+                    <p className="text-xl font-display font-bold text-primary">{profile.total_points.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Points</p>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Items Completed</span>
-                    <span className="font-semibold">{profile.items_completed}</span>
+                  <FollowersDialog userId={profile.id}>
+                    <div className="text-center p-2 bg-muted/30 rounded-lg min-w-[80px] cursor-pointer hover:bg-muted/50 transition-colors">
+                      <p className="text-xl font-display font-bold text-primary">{profile.followers_count}</p>
+                      <p className="text-xs text-muted-foreground">Followers</p>
+                    </div>
+                  </FollowersDialog>
+                  <div className="text-center p-2 bg-muted/30 rounded-lg min-w-[80px]">
+                    <p className="text-xl font-display font-bold text-primary">{profile.following_count}</p>
+                    <p className="text-xs text-muted-foreground">Following</p>
                   </div>
                 </div>
 
@@ -167,7 +176,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                     </Button>
                   </Link>
                 ) : (
-                  <Button 
+                  <Button
                     onClick={toggleFollow}
                     disabled={followLoading}
                     className="w-full"
@@ -227,11 +236,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <p className="text-3xl font-display font-bold text-primary">{profile.total_points.toLocaleString()}</p>
-                    <p className="text-sm text-muted-foreground mt-1">Total Points</p>
-                  </div>
+                <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-4">
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
                     <p className="text-3xl font-display font-bold text-primary">{profile.items_completed}</p>
                     <p className="text-sm text-muted-foreground mt-1">Completed Items</p>
@@ -266,24 +271,37 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                 <CardDescription>Unlock badges by completing challenges</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {achievements.map((achievement) => (
-                    <div
-                      key={achievement.id}
-                      className={`p-4 rounded-lg border-2 text-center transition-all ${achievement.unlocked ? "border-primary bg-primary/5" : "border-muted bg-muted/20 opacity-50"
-                        }`}
-                    >
-                      <div className="text-3xl mb-2">{achievement.icon}</div>
-                      <p className="font-semibold text-sm mb-1">{achievement.name}</p>
-                      <p className="text-xs text-muted-foreground">{achievement.description}</p>
-                      {achievement.unlocked && (
+                {userBadgesLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : userBadges && userBadges.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {userBadges.map((userBadge) => (
+                      <div
+                        key={userBadge.id}
+                        className="p-4 rounded-lg border-2 border-transparent hover:border-primary/20 hover:bg-primary/10 transition-all text-center"
+                      >
+                        <div className="relative size-12 mx-auto mb-2">
+                          <img
+                            src={userBadge.badges.icon_url}
+                            alt={userBadge.badges.name}
+                            className="object-contain w-full h-full"
+                          />
+                        </div>
+                        <p className="font-semibold text-sm mb-1">{userBadge.badges.name}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{userBadge.badges.description}</p>
                         <Badge className="mt-2 text-xs" variant="secondary">
-                          Unlocked
+                          {new Date(userBadge.awarded_at).toLocaleDateString()}
                         </Badge>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No badges earned yet.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

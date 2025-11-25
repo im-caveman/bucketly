@@ -1031,3 +1031,134 @@ export function subscribeToProfileUpdates(
 
   return channel
 }
+
+// Badge Functions
+
+export interface Badge {
+  id: string
+  name: string
+  description: string | null
+  icon_url: string
+  criteria: any
+  created_at: string
+}
+
+export interface UserBadge {
+  id: string
+  user_id: string
+  badge_id: string
+  awarded_at: string
+  badges: Badge
+}
+
+export async function fetchBadges() {
+  const { data, error } = await supabase
+    .from('badges')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    throw error
+  }
+
+  return data as Badge[]
+}
+
+export async function createBadge(badgeData: Omit<Badge, 'id' | 'created_at'>) {
+  const { data, error } = await supabase
+    .from('badges')
+    .insert(badgeData)
+    .select()
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return data as Badge
+}
+
+export async function updateBadge(badgeId: string, updates: Partial<Badge>) {
+  const { data, error } = await supabase
+    .from('badges')
+    .update(updates)
+    .eq('id', badgeId)
+    .select()
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return data as Badge
+}
+
+export async function fetchUserBadges(userId: string) {
+  const { data, error } = await supabase
+    .from('user_badges')
+    .select(`
+      id,
+      user_id,
+      badge_id,
+      awarded_at,
+      badges (
+        id,
+        name,
+        description,
+        icon_url,
+        criteria
+      )
+    `)
+    .eq('user_id', userId)
+    .order('awarded_at', { ascending: false })
+
+  if (error) {
+    throw error
+  }
+
+  return data as UserBadge[]
+}
+
+export async function awardBadge(userId: string, badgeId: string) {
+  const { data, error } = await supabase
+    .from('user_badges')
+    .insert({
+      user_id: userId,
+      badge_id: badgeId,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    // Ignore duplicate key error (already awarded)
+    if (error.code === '23505') {
+      return null
+    }
+    throw error
+  }
+
+  return data
+}
+
+export async function uploadBadgeIcon(file: File): Promise<string> {
+  const fileExt = file.name.split('.').pop()
+  const fileName = `badge-${Date.now()}.${fileExt}`
+  const filePath = `${fileName}`
+
+  const { error: uploadError } = await supabase.storage
+    .from('badges')
+    .upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: false,
+    })
+
+  if (uploadError) {
+    throw uploadError
+  }
+
+  const { data } = supabase.storage
+    .from('badges')
+    .getPublicUrl(filePath)
+
+  return data.publicUrl
+}

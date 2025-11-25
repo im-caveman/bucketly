@@ -33,8 +33,10 @@ import { Bullet } from "@/components/ui/bullet"
 import { useAuth } from "@/contexts/auth-context"
 import { useAdmin } from "@/hooks/use-admin"
 import { fetchUserProfile, subscribeToProfileUpdates, type UserProfile } from "@/lib/bucket-list-service"
+import { useUserProfile } from "@/hooks/use-profile"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useEffect, useState } from "react"
+import { UserHoverCard } from "@/components/profile/user-hover-card"
 
 const data = {
   navMain: [
@@ -81,33 +83,25 @@ const data = {
   },
 }
 
+import LogOutIcon from "@/components/icons/log-out"
+
 export function DashboardSidebar({ className, ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const { isAdmin } = useAdmin()
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-
-  useEffect(() => {
-    async function loadProfile() {
-      if (user?.id) {
-        const profile = await fetchUserProfile(user.id)
-        setUserProfile(profile)
-      }
-    }
-    loadProfile()
-  }, [user?.id])
+  const { profile: userProfile, mutate } = useUserProfile(user?.id)
 
   useEffect(() => {
     if (!userProfile?.id) return
 
-    const channel = subscribeToProfileUpdates(userProfile.id, (updatedProfile) => {
-      setUserProfile(updatedProfile)
+    const channel = subscribeToProfileUpdates(userProfile.id, () => {
+      mutate()
     })
 
     return () => {
       channel.unsubscribe()
     }
-  }, [userProfile?.id])
+  }, [userProfile?.id, mutate])
 
   return (
     <Sidebar {...props} className={cn("py-sides", className)}>
@@ -159,23 +153,34 @@ export function DashboardSidebar({ className, ...props }: React.ComponentProps<t
 
       <SidebarFooter className="p-0">
         <SidebarGroup>
-          <SidebarGroupLabel>
-            <Bullet className="mr-2" />
-            User
+          <SidebarGroupLabel className="flex items-center justify-between pr-2">
+            <div className="flex items-center">
+              <Bullet className="mr-2" />
+              User
+            </div>
+            <button
+              onClick={() => signOut()}
+              className="text-muted-foreground hover:text-destructive transition-colors cursor-pointer"
+              title="Sign Out"
+            >
+              <LogOutIcon className="size-4" />
+            </button>
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <Popover>
                   <PopoverTrigger className="flex gap-0.5 w-full cursor-pointer">
-                    <div className="shrink-0 flex size-14 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground overflow-clip">
-                      <Avatar className="h-full w-full rounded-lg">
-                        <AvatarImage src={userProfile?.avatar_url || ''} alt={userProfile?.username} className="object-cover rounded-lg" />
-                        <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-lg rounded-lg">
-                          {userProfile?.username?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
+                    <UserHoverCard user={userProfile || { username: user?.email?.split('@')[0] || 'User', avatar_url: user?.user_metadata?.avatar_url }}>
+                      <div className="shrink-0 flex size-14 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground overflow-clip">
+                        <Avatar className="h-full w-full rounded-lg">
+                          <AvatarImage src={userProfile?.avatar_url || ''} alt={userProfile?.username} className="object-cover rounded-lg" />
+                          <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-lg rounded-lg">
+                            {userProfile?.username?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                    </UserHoverCard>
                     <div className="pl-3 pr-1.5 pt-2 pb-1.5 flex-1 flex bg-sidebar-accent hover:bg-sidebar-accent-active/75 items-center rounded data-[state=open]:bg-sidebar-accent-active data-[state=open]:hover:bg-sidebar-accent-active data-[state=open]:text-sidebar-accent-foreground">
                       <div className="grid flex-1 text-left text-sm leading-tight">
                         <span className="truncate text-xl font-display">{userProfile?.username || 'Loading...'}</span>

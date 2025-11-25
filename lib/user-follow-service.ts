@@ -14,6 +14,11 @@ export async function followUser(followingId: string): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error("Not authenticated")
 
+  // Prevent self-following
+  if (user.id === followingId) {
+    throw new Error("You cannot follow yourself")
+  }
+
   const { error } = await supabase
     .from("user_follows")
     .insert({
@@ -21,8 +26,23 @@ export async function followUser(followingId: string): Promise<void> {
       following_id: followingId,
     })
 
-  if (error) throw error
+  if (error) {
+    console.error("Follow error details:", error)
+    // Handle specific error cases
+    if (error.code === "23505") { // Unique constraint violation
+      throw new Error("You are already following this user")
+    }
+    if (error.code === "23503") { // Foreign key violation
+      throw new Error("User not found")
+    }
+    if (error.code === "23514") { // Check constraint violation
+      throw new Error("Invalid follow operation")
+    }
+    // Generic error with more details
+    throw new Error(error.message || "Failed to follow user")
+  }
 }
+
 
 /**
  * Unfollow a user
@@ -37,8 +57,13 @@ export async function unfollowUser(followingId: string): Promise<void> {
     .eq("follower_id", user.id)
     .eq("following_id", followingId)
 
-  if (error) throw error
+  if (error) {
+    console.error("Unfollow error details:", error)
+    // Generic error with more details
+    throw new Error(error.message || "Failed to unfollow user")
+  }
 }
+
 
 /**
  * Check if current user is following another user
@@ -62,46 +87,66 @@ export async function isFollowingUser(followingId: string): Promise<boolean> {
  * Get user's followers
  */
 export async function getUserFollowers(userId: string) {
-  const { data, error } = await supabase
+  // 1. Get follower IDs
+  const { data: follows, error: followsError } = await supabase
     .from("user_follows")
-    .select(`
-      id,
-      created_at,
-      follower:follower_id (
-        id,
-        username,
-        avatar_url,
-        bio
-      )
-    `)
+    .select("id, follower_id, created_at")
     .eq("following_id", userId)
     .order("created_at", { ascending: false })
 
-  if (error) throw error
-  return data
+  if (followsError) throw followsError
+  if (!follows || follows.length === 0) return []
+
+  const followerIds = follows.map(f => f.follower_id)
+
+  // 2. Get profiles
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, username, avatar_url, bio")
+    .in("id", followerIds)
+
+  if (profilesError) throw profilesError
+
+  // 3. Merge data
+  const profilesMap = new Map(profiles?.map(p => [p.id, p]))
+
+  return follows.map(f => ({
+    ...f,
+    follower: profilesMap.get(f.follower_id)
+  })).filter(f => f.follower)
 }
 
 /**
  * Get users that a user is following
  */
 export async function getUserFollowing(userId: string) {
-  const { data, error } = await supabase
+  // 1. Get following IDs
+  const { data: follows, error: followsError } = await supabase
     .from("user_follows")
-    .select(`
-      id,
-      created_at,
-      following:following_id (
-        id,
-        username,
-        avatar_url,
-        bio
-      )
-    `)
+    .select("id, following_id, created_at")
     .eq("follower_id", userId)
     .order("created_at", { ascending: false })
 
-  if (error) throw error
-  return data
+  if (followsError) throw followsError
+  if (!follows || follows.length === 0) return []
+
+  const followingIds = follows.map(f => f.following_id)
+
+  // 2. Get profiles
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, username, avatar_url, bio")
+    .in("id", followingIds)
+
+  if (profilesError) throw profilesError
+
+  // 3. Merge data
+  const profilesMap = new Map(profiles?.map(p => [p.id, p]))
+
+  return follows.map(f => ({
+    ...f,
+    following: profilesMap.get(f.following_id)
+  })).filter(f => f.following)
 }
 
 /**
