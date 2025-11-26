@@ -113,8 +113,8 @@ export function Footer() {
                 <div className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
                     <p>© {new Date().getFullYear()} Bucketly. All rights reserved.</p>
                     <div className="flex gap-6">
-                        <Link href="#" className="hover:text-foreground transition-colors">Privacy Policy</Link>
-                        <Link href="#" className="hover:text-foreground transition-colors">Terms of Service</Link>
+                        <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+                        <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
                     </div>
                 </div>
             </div>

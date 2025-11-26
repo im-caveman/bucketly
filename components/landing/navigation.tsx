@@ -48,7 +48,7 @@ export function Navigation({ transparent = false }: NavigationProps) {
           {/* Logo - Responsive sizing */}
           <Link
             href="/"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background rounded-md"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity min-h-[44px] focus:outline-none rounded-md"
             aria-label="Bucketly home"
           >
             <Image
@@ -70,7 +70,7 @@ export function Navigation({ transparent = false }: NavigationProps) {
               <button
                 key={link.href}
                 onClick={() => scrollToSection(link.href.substring(1))}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-2 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background rounded-md cursor-pointer"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors min-h-[44px] px-2 focus:outline-none rounded-md cursor-pointer"
                 aria-label={`Navigate to ${link.label} section`}
               >
                 {link.label}
@@ -80,13 +80,13 @@ export function Navigation({ transparent = false }: NavigationProps) {
 
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center gap-3 lg:gap-4">
-            <Button asChild variant="ghost" size="sm" className="h-9 px-4 focus:ring-2 focus:ring-primary focus:ring-offset-2">
+            <Button asChild variant="ghost" size="sm" className="h-9 px-4 focus:outline-none">
               <Link href="/auth/login" aria-label="Log in to your account">Log In</Link>
             </Button>
             <Button
               asChild
               size="sm"
-              className="h-9 px-4 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              className="h-9 px-4 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity focus:outline-none"
             >
               <Link href="/auth/signup" aria-label="Sign up for a new account">Sign Up</Link>
             </Button>
@@ -95,7 +95,7 @@ export function Navigation({ transparent = false }: NavigationProps) {
           {/* Mobile Menu Button - 44x44px touch target */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 text-foreground hover:text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background cursor-pointer"
+            className="md:hidden p-2 text-foreground hover:text-primary transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md focus:outline-none cursor-pointer"
             aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={isMobileMenuOpen}
             aria-controls="mobile-menu"
@@ -117,20 +117,20 @@ export function Navigation({ transparent = false }: NavigationProps) {
                 <button
                   key={link.href}
                   onClick={() => scrollToSection(link.href.substring(1))}
-                  className="block w-full text-left px-4 py-3 text-base font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors rounded-md min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background cursor-pointer"
+                  className="block w-full text-left px-4 py-3 text-base font-medium text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors rounded-md min-h-[44px] focus:outline-none cursor-pointer"
                   aria-label={`Navigate to ${link.label} section`}
                 >
                   {link.label}
                 </button>
               ))}
               <div className="px-4 pt-4 space-y-3 border-t border-border">
-                <Button asChild variant="outline" size="lg" className="w-full min-h-[44px] text-base focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                <Button asChild variant="outline" size="lg" className="w-full min-h-[44px] text-base focus:outline-none">
                   <Link href="/auth/login">Log In</Link>
                 </Button>
                 <Button
                   asChild
                   size="lg"
-                  className="w-full min-h-[44px] text-base bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                  className="w-full min-h-[44px] text-base bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity focus:outline-none"
                 >
                   <Link href="/auth/signup">Sign Up</Link>
                 </Button>

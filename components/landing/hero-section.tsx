@@ -1,9 +1,8 @@
 "use client"
 
 import Link from "next/link"
-import Image from "next/image"
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { motion } from "framer-motion"
 
 interface HeroSectionProps {
   onGetStarted: () => void
@@ -11,77 +10,87 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ onGetStarted, onLogin }: HeroSectionProps) {
-  const [imageError, setImageError] = useState(false)
-
   return (
-    <section className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-accent/5 pt-16 md:pt-20" aria-label="Hero section">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 py-12 sm:py-16 md:py-20 lg:py-24 w-full">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 lg:gap-12 items-center">
-          {/* Left Column - Content */}
-          <div className="text-center lg:text-left space-y-4 sm:space-y-6">
-            {/* Headline - Font sizes: 32px (mobile) to 72px (desktop) */}
-            <h1 className="font-display text-[2rem] leading-[1.1] sm:text-5xl md:text-6xl lg:text-[4.5rem] font-bold" id="hero-heading">
-              Turn Dreams Into{" "}
-              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background pt-16 md:pt-20" aria-label="Hero section">
+      {/* Decorative Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-primary/5 via-transparent to-accent/5 rounded-full blur-3xl opacity-50" />
+      </div>
+
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 md:px-8 py-12 sm:py-16 md:py-20 lg:py-24 w-full text-center z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="space-y-6 sm:space-y-8"
+        >
+          {/* Badge/Pill */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border/50 backdrop-blur-sm mx-auto"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+            </span>
+            <span className="text-sm font-medium text-muted-foreground">The Ultimate Bucket List App</span>
+          </motion.div>
+
+          {/* Headline */}
+          <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold tracking-tight" id="hero-heading">
+            Turn Dreams Into{" "}
+            <span className="relative inline-block">
+              <span className="bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent animate-gradient-x bg-[length:200%_auto]">
                 Achievements
               </span>
-            </h1>
+              {/* Decorative underline/sparkle */}
+              <svg className="absolute -bottom-2 left-0 w-full h-3 text-accent/30" viewBox="0 0 100 10" preserveAspectRatio="none">
+                <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="2" fill="none" />
+              </svg>
+            </span>
+          </h1>
 
-            {/* Subheadline - Font sizes: 16px (mobile) to 20px (desktop) */}
-            <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-              Track your bucket list, compete with friends, and celebrate every
-              milestone in the ultimate gamified goal-tracking experience
-            </p>
+          {/* Subheadline */}
+          <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            Track your bucket list, compete with friends, and celebrate every
+            milestone in the ultimate gamified goal-tracking experience.
+          </p>
 
-            {/* CTA Buttons - Minimum 44x44px touch targets */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start pt-2 sm:pt-4">
-              <Button
-                asChild
-                size="xl"
-                className="min-h-[44px] w-full sm:w-auto px-8 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity text-base focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                onClick={onGetStarted}
-              >
-                <Link href="/auth/signup" aria-label="Sign up to start your journey with Bucketly">Start Your Journey</Link>
-              </Button>
-              <Button
-                asChild
-                size="xl"
-                variant="outline"
-                className="min-h-[44px] w-full sm:w-auto px-8 text-base focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                onClick={onLogin}
-              >
-                <Link href="/auth/login" aria-label="Log in to your Bucketly account">Log In</Link>
-              </Button>
-            </div>
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
+            <Button
+              asChild
+              size="xl"
+              className="min-h-[56px] px-8 text-lg rounded-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all hover:scale-105 shadow-lg shadow-primary/25"
+              onClick={onGetStarted}
+            >
+              <Link href="/auth/signup" aria-label="Sign up to start your journey with Bucketly">
+                Start Your Journey
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="xl"
+              variant="outline"
+              className="min-h-[56px] px-8 text-lg rounded-full border-2 hover:bg-muted/50 transition-all hover:scale-105"
+              onClick={onLogin}
+            >
+              <Link href="/auth/login" aria-label="Log in to your Bucketly account">
+                Log In
+              </Link>
+            </Button>
           </div>
 
-          {/* Right Column - Visual - Optimized aspect ratios for all breakpoints */}
-          <div className="relative w-full aspect-square max-h-[400px] sm:max-h-[500px] lg:max-h-none lg:aspect-auto lg:h-[450px] xl:h-[500px] flex items-center justify-center mt-4 lg:mt-0" role="img" aria-label="Bucketly application preview">
-            {!imageError ? (
-              <div className="relative w-full h-full rounded-xl sm:rounded-2xl overflow-hidden border border-border/50 shadow-2xl shadow-primary/20">
-                <Image
-                  src="/placeholder.svg"
-                  alt="Dashboard preview showing multiple bucket lists with colorful progress bars, completion statistics, and gamification elements including points and achievements"
-                  fill
-                  className="object-cover"
-                  priority
-                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 600px"
-                  onError={() => setImageError(true)}
-                />
-              </div>
-            ) : (
-              // Fallback gradient when image fails to load
-              <div className="w-full h-full rounded-xl sm:rounded-2xl bg-gradient-to-br from-primary/20 via-accent/20 to-secondary/20 border border-border/50 shadow-2xl shadow-primary/20 flex items-center justify-center">
-                <div className="text-center space-y-3 sm:space-y-4 p-6 sm:p-8">
-                  <div className="text-5xl sm:text-6xl" role="img" aria-label="Target emoji">🎯</div>
-                  <p className="text-muted-foreground font-display text-lg sm:text-xl">
-                    Your Journey Starts Here
-                  </p>
-                </div>
-              </div>
-            )}
+          {/* Social Proof / Trust Indicators (Optional) */}
+          <div className="pt-12 flex items-center justify-center gap-8 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+            {/* Add logos or trust text here if needed */}
+            <p className="text-sm text-muted-foreground">Join 10,000+ Dreamers Worldwide</p>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   )

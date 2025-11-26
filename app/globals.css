@@ -218,7 +218,7 @@
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible {
-    @apply outline-2 outline-offset-2 outline-primary;
+    @apply outline-none;
   }
   
   /* Skip to content link - hidden by default, visible on focus */
