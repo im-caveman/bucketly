@@ -44,4 +44,20 @@ next-env.d.ts
 
 # supabase
 supabase/functions/**/.env
+supabase/migrations/
+
+# internal documentation (not needed in repo)
+dev-docs/
+docs/
+*.pdf
+
+# development utilities
+set-admin.mjs
+mock.json
+
+# IDE settings
+.vscode/
+
+# generated reports
+**/lighthouse-report.json
 
