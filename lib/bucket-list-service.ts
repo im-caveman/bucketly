@@ -16,6 +16,7 @@ import type {
   ListFollowerInsert,
   TimelineEventInsert,
   ProfileUpdate,
+  GlobalItem,
 } from '@/types/supabase'
 
 export interface BucketListWithItems {
@@ -303,6 +304,42 @@ export async function deleteBucketList(listId: string) {
   }
 }
 
+export async function fetchGlobalItems(
+  category?: Category,
+  searchQuery?: string,
+  page: number = 0,
+  pageSize: number = 20
+) {
+  const from = page * pageSize
+  const to = from + pageSize - 1
+
+  let query = supabase
+    .from('global_items')
+    .select('*', { count: 'exact' })
+    .order('points', { ascending: false })
+    .range(from, to)
+
+  if (category) {
+    query = query.eq('category', category)
+  }
+
+  if (searchQuery) {
+    query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
+  }
+
+  const { data, error, count } = await query
+
+  if (error) {
+    throw error
+  }
+
+  return {
+    data: data as GlobalItem[],
+    count: count || 0,
+    hasMore: count ? count > to + 1 : false
+  }
+}
+
 // Bucket Item Management Functions
 
 export type AddBucketItemData = Omit<BucketItemInsert, 'id' | 'bucket_list_id' | 'completed' | 'completed_date' | 'created_at' | 'updated_at'>
@@ -317,6 +354,9 @@ export async function addBucketItem(listId: string, itemData: AddBucketItemData)
       points: itemData.points,
       difficulty: itemData.difficulty,
       location: itemData.location,
+      current_value: itemData.current_value,
+      target_value: itemData.target_value,
+      unit_type: itemData.unit_type,
     })
     .select()
     .single()
@@ -329,10 +369,33 @@ export async function addBucketItem(listId: string, itemData: AddBucketItemData)
 }
 
 export async function toggleItemCompletion(itemId: string, completed: boolean) {
+  // 1. Get the item first to know its points and user_id (via bucket_list)
+  const { data: item, error: fetchError } = await supabase
+    .from('bucket_items')
+    .select(`
+      *,
+      bucket_lists (
+        user_id,
+        category
+      )
+    `)
+    .eq('id', itemId)
+    .single()
+
+  if (fetchError) throw fetchError
+  if (!item) throw new Error('Item not found')
+
+  const userId = item.bucket_lists?.user_id
+  if (!userId) throw new Error('User not found for this item')
+
+
+
+  // 2. Update the item status
   const { data, error } = await supabase
     .from('bucket_items')
     .update({
       completed,
+      completed_date: completed ? new Date().toISOString() : null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', itemId)
@@ -343,12 +406,98 @@ export async function toggleItemCompletion(itemId: string, completed: boolean) {
     throw error
   }
 
+  // 3. Handle side effects (Points & Timeline)
+  // We use recalculation to ensure data consistency and avoid double counting
+  await recalculateUserStats(userId)
+
+  if (completed) {
+    // Check if timeline event already exists to avoid duplicates
+    const { data: existingEvents } = await supabase
+      .from('timeline_events')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('event_type', 'item_completed')
+      .contains('metadata', { item_id: itemId })
+
+    if (!existingEvents || existingEvents.length === 0) {
+      await supabase.from('timeline_events').insert({
+        user_id: userId,
+        event_type: 'item_completed',
+        title: `Completed: ${item.title}`,
+        description: item.description,
+        metadata: {
+          item_id: itemId,
+          points: item.points,
+          category: item.bucket_lists?.category
+        },
+        is_public: true
+      })
+    }
+  } else {
+    // Remove timeline event if unchecking
+    await supabase
+      .from('timeline_events')
+      .delete()
+      .eq('user_id', userId)
+      .eq('event_type', 'item_completed')
+      .contains('metadata', { item_id: itemId })
+  }
+
   // Recalculate global ranks after item completion
   if (completed) {
     await recalculateGlobalRanks()
   }
 
   return data
+}
+
+export async function recalculateUserStats(userId: string) {
+  // 1. Calculate total points and completed items from bucket_items
+  const { data: items, error } = await supabase
+    .from('bucket_items')
+    .select('points, completed')
+    .eq('completed', true)
+    // We need to filter by user_id, but bucket_items doesn't have user_id directly.
+    // We need to join with bucket_lists.
+    // However, Supabase JS client doesn't support deep filtering easily in one go for aggregation.
+    // So we fetch items for the user's lists.
+    .not('points', 'is', null)
+
+  if (error) {
+    console.error('Error calculating stats:', error)
+    return
+  }
+
+  // Filter items that belong to the user (via bucket_lists)
+  // Since we can't easily do a join-filter-aggregate in one query without a view or RPC,
+  // we'll fetch the user's lists first, then their items.
+
+  const { data: userLists } = await supabase
+    .from('bucket_lists')
+    .select('id')
+    .eq('user_id', userId)
+
+  if (!userLists || userLists.length === 0) return
+
+  const listIds = userLists.map(l => l.id)
+
+  const { data: userItems } = await supabase
+    .from('bucket_items')
+    .select('points')
+    .eq('completed', true)
+    .in('bucket_list_id', listIds)
+
+  const totalPoints = userItems?.reduce((sum, item) => sum + (item.points || 0), 0) || 0
+  const itemsCompleted = userItems?.length || 0
+
+  // 2. Update profile
+  await supabase
+    .from('profiles')
+    .update({
+      total_points: totalPoints,
+      items_completed: itemsCompleted
+    })
+    .eq('id', userId)
 }
 
 // Rank calculation function

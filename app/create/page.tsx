@@ -18,14 +18,19 @@ import type { Category } from "@/types/bucket-list"
 import { validateListName, validateCategory, validateItemTitle, validatePoints } from "@/lib/validation"
 import { handleSupabaseError, formatErrorMessage } from "@/lib/error-handler"
 import { useAdmin } from "@/hooks/use-admin"
+import { fetchGlobalItems } from "@/lib/bucket-list-service"
+import type { GlobalItem } from "@/types/supabase"
+import { useEffect } from "react"
 
 interface ListItem {
   id: string
   title: string
-  description: string
-  difficulty?: "easy" | "medium" | "hard"
-  location?: string
+  description: string | null
+  difficulty?: "easy" | "medium" | "hard" | null
+  location?: string | null
   points: number
+  target_value?: number
+  unit_type?: string | null
 }
 
 interface CustomListItem {
@@ -34,6 +39,8 @@ interface CustomListItem {
   description: string
   difficulty: "easy" | "medium" | "hard"
   location?: string
+  target_value?: number
+  unit_type?: string
 }
 
 const categoriesList = [
@@ -47,47 +54,7 @@ const categoriesList = [
   { id: "miscellaneous", label: "Miscellaneous", icon: "✨" },
 ] as const
 
-const availableItems: ListItem[] = [
-  {
-    id: "a1",
-    title: "Visit Tokyo",
-    description: "Explore the vibrant capital",
-    points: 100,
-    difficulty: "medium",
-    location: "Japan",
-  },
-  {
-    id: "a2",
-    title: "Climb Mount Everest",
-    description: "Summit the world's highest peak",
-    points: 300,
-    difficulty: "hard",
-    location: "Nepal",
-  },
-  {
-    id: "a3",
-    title: "Learn to Scuba Dive",
-    description: "Get certified for underwater exploration",
-    points: 150,
-    difficulty: "medium",
-  },
-  {
-    id: "a4",
-    title: "Eat authentic Pad Thai",
-    description: "Experience Thai street food culture",
-    points: 50,
-    difficulty: "easy",
-    location: "Thailand",
-  },
-  {
-    id: "a5",
-    title: "Read The Great Gatsby",
-    description: "Classic American literature",
-    points: 75,
-    difficulty: "easy",
-  },
-  { id: "a6", title: "Write a novel", description: "Complete a full-length book", points: 500, difficulty: "hard" },
-]
+
 
 export default function CreateListPage() {
   const router = useRouter()
@@ -105,10 +72,54 @@ export default function CreateListPage() {
   const [customItemTitle, setCustomItemTitle] = useState("")
   const [customItemDesc, setCustomItemDesc] = useState("")
   const [customItemDifficulty, setCustomItemDifficulty] = useState<"easy" | "medium" | "hard">("easy")
+  const [customTargetValue, setCustomTargetValue] = useState<number>(0)
+  const [customUnitType, setCustomUnitType] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState("")
   const [itemOrder, setItemOrder] = useState<(ListItem | CustomListItem)[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [validationErrors, setValidationErrors] = useState<{ name?: string; category?: string }>({})
+  const [globalItems, setGlobalItems] = useState<ListItem[]>([])
+  const [isLoadingItems, setIsLoadingItems] = useState(false)
+
+  useEffect(() => {
+    if (step === 2 && addMode === "search") {
+      const loadItems = async () => {
+        setIsLoadingItems(true)
+        try {
+          const { data } = await fetchGlobalItems(listCategory, searchQuery)
+          setGlobalItems(data.map(item => ({
+            id: item.id,
+            title: item.title,
+            description: item.description,
+            difficulty: item.difficulty,
+            location: item.location,
+            points: item.points,
+            target_value: item.target_value,
+            unit_type: item.unit_type
+          })))
+        } catch (error) {
+          console.error("Failed to fetch items", error)
+        } finally {
+          setIsLoadingItems(false)
+        }
+      }
+
+      // Debounce search
+      const timer = setTimeout(loadItems, 300)
+      return () => clearTimeout(timer)
+    }
+  }, [step, addMode, listCategory, searchQuery])
+
+  // Reset custom fields when category changes or mode changes
+  useEffect(() => {
+    if (listCategory === 'books') {
+      setCustomUnitType('chapters')
+      setCustomTargetValue(0)
+    } else {
+      setCustomUnitType('')
+      setCustomTargetValue(0)
+    }
+  }, [listCategory])
 
 
   const totalPoints = useMemo(() => {
@@ -139,11 +150,15 @@ export default function CreateListPage() {
       title: customItemTitle,
       description: customItemDesc,
       difficulty: customItemDifficulty,
+      target_value: customTargetValue > 0 ? customTargetValue : undefined,
+      unit_type: customUnitType || undefined,
     }
     setCustomItems([...customItems, newItem])
     setCustomItemTitle("")
     setCustomItemDesc("")
     setCustomItemDifficulty("easy")
+    setCustomTargetValue(0)
+    if (listCategory !== 'books') setCustomUnitType("")
   }
 
   const validateStep1 = () => {
@@ -200,9 +215,12 @@ export default function CreateListPage() {
           bucket_list_id: bucketList.id,
           title: item.title,
           description: item.description || null,
-          points: "points" in item ? item.points : 50,
+          points: "points" in item ? item.points : 0,
           difficulty: item.difficulty || null,
           location: "location" in item ? item.location : null,
+          target_value: item.target_value || 0,
+          unit_type: item.unit_type || null,
+          current_value: 0,
         }))
 
         const { error: itemsError } = await supabase
@@ -261,11 +279,7 @@ export default function CreateListPage() {
     }
   }
 
-  const filteredItems = availableItems.filter(
-    (item) =>
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  const filteredItems = globalItems
 
   const isStep1Valid = listName.trim().length > 0
   const isStep2Valid = selectedItems.length > 0 || customItems.length > 0
@@ -394,43 +408,54 @@ export default function CreateListPage() {
                   />
 
                   <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {filteredItems.map((item) => (
-                      <Card
-                        key={item.id}
-                        className="cursor-pointer transition-all hover:border-primary"
-                        onClick={() => handleSelectItem(item)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start gap-3">
-                            <div className="flex items-center gap-2 mt-1">
-                              <input
-                                type="checkbox"
-                                checked={selectedItems.some((i) => i.id === item.id)}
-                                onChange={() => { }}
-                                className="w-5 h-5"
-                              />
-                            </div>
-                            <div className="flex-1">
-                              <h4 className="font-semibold">{item.title}</h4>
-                              <p className="text-sm text-muted-foreground">{item.description}</p>
-                              <div className="flex gap-2 mt-2">
-                                {item.difficulty && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    {item.difficulty}
-                                  </Badge>
-                                )}
-                                {item.location && (
-                                  <Badge variant="outline" className="text-xs gap-1">
-                                    📍 {item.location}
-                                  </Badge>
-                                )}
+                    {isLoadingItems ? (
+                      <div className="text-center py-8 text-muted-foreground">Loading items...</div>
+                    ) : filteredItems.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">No items found. Try a different search or create a custom item.</div>
+                    ) : (
+                      filteredItems.map((item) => (
+                        <Card
+                          key={item.id}
+                          className={`cursor-pointer transition-all hover:border-primary ${selectedItems.find((i) => i.id === item.id) ? "border-primary bg-primary/5" : ""}`}
+                          onClick={() => handleSelectItem(item)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                              <div className="flex items-center gap-2 mt-1">
+                                <input
+                                  type="checkbox"
+                                  checked={!!selectedItems.find((i) => i.id === item.id)}
+                                  onChange={() => { }}
+                                  className="w-5 h-5"
+                                />
                               </div>
+                              <div className="flex-1">
+                                <h4 className="font-semibold">{item.title}</h4>
+                                <p className="text-sm text-muted-foreground">{item.description}</p>
+                                <div className="flex gap-2 mt-2 flex-wrap">
+                                  {item.difficulty && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {item.difficulty}
+                                    </Badge>
+                                  )}
+                                  {item.location && (
+                                    <Badge variant="outline" className="text-xs gap-1">
+                                      📍 {item.location}
+                                    </Badge>
+                                  )}
+                                  {item.unit_type && (
+                                    <Badge variant="outline" className="text-xs gap-1">
+                                      📊 {item.target_value} {item.unit_type}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <Badge className="shrink-0 bg-primary text-primary-foreground">+{item.points}</Badge>
                             </div>
-                            <Badge className="shrink-0 bg-primary text-primary-foreground">+{item.points}</Badge>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
                   </div>
                 </div>
               ) : (
@@ -456,6 +481,27 @@ export default function CreateListPage() {
                       <SelectItem value="hard">Hard</SelectItem>
                     </SelectContent>
                   </Select>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-xs mb-1 block">Target Value (Optional)</Label>
+                      <Input
+                        type="number"
+                        placeholder="e.g. 20"
+                        value={customTargetValue || ""}
+                        onChange={(e) => setCustomTargetValue(parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs mb-1 block">Unit (e.g. chapters)</Label>
+                      <Input
+                        placeholder="e.g. chapters"
+                        value={customUnitType}
+                        onChange={(e) => setCustomUnitType(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
                   <p className="text-xs text-muted-foreground">Custom items don't earn points</p>
                   <Button onClick={handleAddCustomItem} className="w-full gap-2">
                     + Add Item

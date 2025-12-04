@@ -15,33 +15,33 @@ interface FeatureGridProps {
 const defaultFeatures: Feature[] = [
   {
     icon: "📝",
-    title: "Create Custom Lists",
-    description: "Build personalized bucket lists for travel, food, books, and more with unlimited customization options"
+    title: "Your Life, Your Lists, Your Way",
+    description: "Design bucket lists tailored to YOU. Choose from curated items or add your own—unlimited lists, unlimited possibilities."
   },
   {
     icon: "📊",
-    title: "Track Progress",
-    description: "Visualize your journey with beautiful progress bars and detailed statistics that keep you motivated"
+    title: "See How Far You've Come",
+    description: "Track every step with visual progress that celebrates your wins and keeps motivation high when you need it most."
   },
   {
     icon: "🏆",
-    title: "Earn Points & Compete",
-    description: "Complete goals to earn points and climb the global leaderboard while unlocking achievements"
+    title: "Because Bragging Rights Should Be Earned",
+    description: "Earn points for every bucket list item you crush. Compete globally, dominate your category, and let friendly competition fuel your fire."
   },
   {
     icon: "🤝",
-    title: "Share & Connect",
-    description: "Follow friends, share achievements, and inspire each other on your bucket list journeys"
+    title: "Stop Doing It Alone",
+    description: "Follow friends, join the movement, and turn solo goals into shared celebrations. Your bucket list journey just got a whole lot less lonely."
   },
   {
     icon: "📸",
-    title: "Capture Memories",
-    description: "Document your experiences with photos and stories to relive your favorite moments forever"
+    title: "Because You'll Want to Remember This",
+    description: "Document every adventure with photos, videos, and journal entries. Build a digital scrapbook of your most incredible experiences."
   },
   {
     icon: "🔍",
-    title: "Discover Lists",
-    description: "Explore curated bucket lists from the community and find inspiration for your next adventure"
+    title: "Never Run Out of Things to Do",
+    description: "Explore expert-curated bucket lists and community favorites. Travel? Food? Books? Your next obsession is waiting."
   }
 ]
 
@@ -53,14 +53,14 @@ export function FeatureGrid({ features = defaultFeatures }: FeatureGridProps) {
         <div className="text-center mb-10 sm:mb-12 md:mb-16 space-y-3 sm:space-y-4">
           {/* Font sizes: 28px (mobile) to 48px (desktop) */}
           <h2 id="features-heading" className="font-display text-[1.75rem] leading-tight sm:text-4xl md:text-5xl font-bold px-4">
-            Everything You Need to{" "}
+            Features That Make Goals{" "}
             <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Achieve More
+              Inevitable
             </span>
           </h2>
           {/* Font sizes: 16px (mobile) to 18px (desktop) */}
           <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto px-4 leading-relaxed">
-            Powerful features designed to help you track, complete, and celebrate your bucket list goals
+            The complete toolkit to track, achieve, and celebrate your biggest dreams
           </p>
         </div>
 

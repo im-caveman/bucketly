@@ -7,7 +7,10 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { toggleItemCompletion } from "@/lib/bucket-list-service"
+import { toggleItemCompletion, updateBucketItem } from "@/lib/bucket-list-service"
+import { Progress } from "@/components/ui/progress"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface ItemCardProps {
   item: BucketListItem
@@ -25,6 +28,28 @@ const difficultyColors = {
 export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange }: ItemCardProps) {
   const { toast } = useToast()
   const [isUpdating, setIsUpdating] = useState(false)
+  const [currentValue, setCurrentValue] = useState(item.currentValue || 0)
+
+  const handleProgressChange = async (newValue: number) => {
+    if (!item.targetValue) return
+
+    // Clamp value between 0 and target
+    const clampedValue = Math.max(0, Math.min(newValue, item.targetValue))
+    setCurrentValue(clampedValue)
+
+    // If reached target, mark as completed
+    if (clampedValue >= item.targetValue && !item.completed) {
+      handleToggle(true)
+    } else if (clampedValue < item.targetValue && item.completed) {
+      handleToggle(false)
+    }
+
+    try {
+      await updateBucketItem(item.id, { current_value: clampedValue })
+    } catch (error) {
+      console.error("Failed to update progress", error)
+    }
+  }
 
   const handleToggle = async (checked: boolean | string) => {
     const newCompleted = checked === true
@@ -39,13 +64,16 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange }:
     setIsUpdating(true)
     try {
       await toggleItemCompletion(item.id, newCompleted)
-      
+
       toast({
         title: newCompleted ? "Item completed! 🎉" : "Item marked as incomplete",
-        description: newCompleted 
-          ? `You earned ${item.points} points!` 
+        description: newCompleted
+          ? `You earned ${item.points} points!`
           : "Keep working on it!",
       })
+
+      // Dispatch event for widget update
+      window.dispatchEvent(new CustomEvent('bucketly:item-update'))
 
       // Notify parent to refresh data
       if (onCompletionChange) {
@@ -64,15 +92,14 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange }:
 
   return (
     <Card
-      className={`overflow-hidden transition-all duration-300 ${
-        item.completed ? "opacity-60 bg-muted/50" : "hover:border-primary hover:shadow-md hover:shadow-primary/10"
-      }`}
+      className={`overflow-hidden transition-all duration-300 ${item.completed ? "opacity-60 bg-muted/50" : "hover:border-primary hover:shadow-md hover:shadow-primary/10"
+        }`}
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
-          <Checkbox 
-            checked={item.completed} 
-            onCheckedChange={handleToggle} 
+          <Checkbox
+            checked={item.completed}
+            onCheckedChange={handleToggle}
             className="mt-1"
             disabled={isUpdating}
           />
@@ -80,9 +107,8 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange }:
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex-1">
                 <h4
-                  className={`font-display font-bold text-base ${
-                    item.completed ? "line-through text-muted-foreground" : ""
-                  }`}
+                  className={`font-display font-bold text-base ${item.completed ? "line-through text-muted-foreground" : ""
+                    }`}
                 >
                   {item.title}
                 </h4>
@@ -113,6 +139,33 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange }:
           </div>
         </div>
 
+
+        {item.targetValue && item.targetValue > 0 && (
+          <div className="mt-4 space-y-2">
+            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+              <span>Progress: {currentValue} / {item.targetValue} {item.unitType}</span>
+              <span>{Math.round((currentValue / item.targetValue) * 100)}%</span>
+            </div>
+            <Progress value={(currentValue / item.targetValue) * 100} className="h-2" />
+
+            {!item.completed && (
+              <div className="flex items-center gap-2 mt-2">
+                <Label htmlFor={`progress-${item.id}`} className="text-xs whitespace-nowrap">Update:</Label>
+                <Input
+                  id={`progress-${item.id}`}
+                  type="number"
+                  min="0"
+                  max={item.targetValue}
+                  value={currentValue}
+                  onChange={(e) => handleProgressChange(parseInt(e.target.value) || 0)}
+                  className="h-8 w-24 text-xs"
+                />
+                <span className="text-xs text-muted-foreground">{item.unitType}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {item.completed && (
           <Button onClick={onUploadMemory} variant="outline" size="sm" className="mt-3 w-full gap-2 bg-transparent">
             <span>📸</span>
@@ -120,6 +173,6 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange }:
           </Button>
         )}
       </CardContent>
-    </Card>
+    </Card >
   )
 }

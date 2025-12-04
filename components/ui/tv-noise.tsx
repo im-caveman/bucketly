@@ -27,6 +27,7 @@ export default function TVNoise({
     if (!ctx) return;
 
     const frameDelay = 1000 / speed;
+    let resizeObserver: ResizeObserver | undefined;
 
     const resizeCanvas = () => {
       const rect = canvas.getBoundingClientRect();
@@ -96,18 +97,19 @@ export default function TVNoise({
     resizeCanvas();
     animationFrameRef.current = requestAnimationFrame(animate);
 
-    // Handle resize
-    const handleResize = () => {
+    // Handle resize with ResizeObserver
+    resizeObserver = new ResizeObserver(() => {
       resizeCanvas();
-    };
-
-    window.addEventListener("resize", handleResize);
+    });
+    resizeObserver.observe(canvas);
 
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
-      window.removeEventListener("resize", handleResize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
     };
   }, [intensity, speed]);
 

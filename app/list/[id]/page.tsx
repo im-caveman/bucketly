@@ -9,10 +9,11 @@ import { CompletionModal } from "@/components/bucket-list/completion-modal"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { fetchBucketListById, type BucketListWithItems } from "@/lib/bucket-list-service"
+import { fetchBucketListById, toggleItemCompletion, type BucketListWithItems } from "@/lib/bucket-list-service"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { SocialShare } from "@/components/common/social-share"
 
 export default function ListDetailPage() {
   const params = useParams()
@@ -54,18 +55,30 @@ export default function ListDetailPage() {
     return true
   })
 
-  const handleToggleItem = (id: string) => {
+  const handleToggleItem = async (id: string) => {
     const item = items.find((i) => i.id === id)
     if (!item) return
 
-    if (!item.completed) {
+    // Optimistic update
+    const newCompleted = !item.completed
+    setItems(items.map((i) => (i.id === id ? { ...i, completed: newCompleted } : i)))
+
+    if (newCompleted) {
       setCompletionModal({ isOpen: true, item })
-      // Optimistic update
-      setItems(items.map((i) => (i.id === id ? { ...i, completed: true } : i)))
-    } else {
-      // Optimistic update
-      setItems(items.map((i) => (i.id === id ? { ...i, completed: false } : i)))
-      // TODO: Call API to toggle completion
+    }
+
+    try {
+      await toggleItemCompletion(id, newCompleted)
+
+      // Dispatch event for widget update
+      window.dispatchEvent(new CustomEvent('bucketly:item-update'))
+
+      toast.success(newCompleted ? "Item completed! 🎉" : "Item marked as incomplete")
+    } catch (error) {
+      console.error("Failed to toggle item:", error)
+      toast.error("Failed to update item")
+      // Revert optimistic update
+      setItems(items.map((i) => (i.id === id ? { ...i, completed: !newCompleted } : i)))
     }
   }
 
@@ -129,12 +142,20 @@ export default function ListDetailPage() {
             <div className="flex items-center gap-2">
               <Badge variant="secondary">{list.follower_count.toLocaleString()} followers</Badge>
               <Badge variant="outline">Created by {list.profiles?.username || "Unknown"}</Badge>
+
             </div>
           </div>
-          <Button size="lg" className="gap-2 shrink-0">
-            <span>❤️</span>
-            {list.isFollowing ? "Following" : "Follow"}
-          </Button>
+          <div className="flex gap-2 shrink-0">
+            <SocialShare
+              url={typeof window !== 'undefined' ? window.location.href : ''}
+              title={`Check out this bucket list: ${list.name}`}
+              description={list.description || undefined}
+            />
+            <Button size="lg" className="gap-2">
+              <span>❤️</span>
+              {list.isFollowing ? "Following" : "Follow"}
+            </Button>
+          </div>
         </div>
 
         {/* Progress Section */}
@@ -169,15 +190,17 @@ export default function ListDetailPage() {
           )}
         </div>
       </div>
-      {completionModal.item && (
-        <CompletionModal
-          isOpen={completionModal.isOpen}
-          itemTitle={completionModal.item.title}
-          itemPoints={completionModal.item.points}
-          onClose={() => setCompletionModal({ isOpen: false, item: null })}
-          onSave={handleSaveMemory}
-        />
-      )}
-    </div>
+      {
+        completionModal.item && (
+          <CompletionModal
+            isOpen={completionModal.isOpen}
+            itemTitle={completionModal.item.title}
+            itemPoints={completionModal.item.points}
+            onClose={() => setCompletionModal({ isOpen: false, item: null })}
+            onSave={handleSaveMemory}
+          />
+        )
+      }
+    </div >
   )
 }

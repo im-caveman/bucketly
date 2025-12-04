@@ -35,6 +35,9 @@ export interface BucketListItem {
   bucketListId?: string
   createdAt?: string
   updatedAt?: string
+  currentValue?: number
+  targetValue?: number
+  unitType?: string
 }
 
 /**
@@ -53,6 +56,9 @@ export function toBucketListItem(dbItem: DbBucketItem): BucketListItem {
     bucketListId: dbItem.bucket_list_id,
     createdAt: dbItem.created_at,
     updatedAt: dbItem.updated_at,
+    currentValue: dbItem.current_value || 0,
+    targetValue: dbItem.target_value || 0,
+    unitType: dbItem.unit_type || undefined,
   }
 }
 
@@ -159,7 +165,7 @@ export interface TimelineEvent {
  */
 export function toTimelineEvent(dbEvent: DbTimelineEvent): TimelineEvent {
   const metadata = (dbEvent.metadata as Record<string, any>) || {}
-  
+
   return {
     id: dbEvent.id,
     type: dbEvent.event_type,
@@ -206,10 +212,10 @@ export function toMemory(
   points: number,
   completedDate: string
 ): Memory {
-  const photos = Array.isArray(dbMemory.photos) 
+  const photos = Array.isArray(dbMemory.photos)
     ? (dbMemory.photos as string[])
     : []
-  
+
   return {
     id: dbMemory.id,
     itemId: dbMemory.bucket_item_id,

@@ -44,6 +44,48 @@ export type TimelineEventType =
 export interface Database {
   public: {
     Tables: {
+      global_items: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          category: Category
+          points: number
+          difficulty: Difficulty | null
+          location: string | null
+          target_value: number
+          unit_type: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          category: Category
+          points?: number
+          difficulty?: Difficulty | null
+          location?: string | null
+          target_value?: number
+          unit_type?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          category?: Category
+          points?: number
+          difficulty?: Difficulty | null
+          location?: string | null
+          target_value?: number
+          unit_type?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           id: string
@@ -169,6 +211,9 @@ export interface Database {
           completed_date: string | null
           created_at: string
           updated_at: string
+          current_value: number
+          target_value: number
+          unit_type: string | null
         }
         Insert: {
           id?: string
@@ -182,6 +227,9 @@ export interface Database {
           completed_date?: string | null
           created_at?: string
           updated_at?: string
+          current_value?: number
+          target_value?: number
+          unit_type?: string | null
         }
         Update: {
           id?: string
@@ -195,6 +243,9 @@ export interface Database {
           completed_date?: string | null
           created_at?: string
           updated_at?: string
+          current_value?: number
+          target_value?: number
+          unit_type?: string | null
         }
         Relationships: [
           {
@@ -408,6 +459,70 @@ export interface Database {
           }
         ]
       }
+      badges: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          icon_url: string
+          criteria: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          icon_url: string
+          criteria: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          icon_url?: string
+          criteria?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_badges: {
+        Row: {
+          id: string
+          user_id: string
+          badge_id: string
+          awarded_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          badge_id: string
+          awarded_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          badge_id?: string
+          awarded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       leaderboard_view: {
@@ -518,3 +633,10 @@ export type TimelineEventUpdate = TablesUpdate<'timeline_events'>
 // View types
 export type LeaderboardEntry = Database['public']['Views']['leaderboard_view']['Row']
 export type UserFeedEvent = Database['public']['Views']['user_feed_view']['Row']
+
+export type GlobalItem = Tables<'global_items'>
+export type GlobalItemInsert = TablesInsert<'global_items'>
+export type GlobalItemUpdate = TablesUpdate<'global_items'>
+
+export type Badge = Tables<'badges'>
+export type UserBadge = Tables<'user_badges'>

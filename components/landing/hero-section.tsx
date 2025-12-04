@@ -42,10 +42,10 @@ export function HeroSection({ onGetStarted, onLogin }: HeroSectionProps) {
 
           {/* Headline */}
           <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold tracking-tight" id="hero-heading">
-            Turn Dreams Into{" "}
-            <span className="relative inline-block">
+            Life's Too Short for<br />
+            <span className="relative inline-block whitespace-nowrap">
               <span className="bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent animate-gradient-x bg-[length:200%_auto]">
-                Achievements
+                Incomplete Bucket Lists
               </span>
               {/* Decorative underline/sparkle */}
               <svg className="absolute -bottom-2 left-0 w-full h-3 text-accent/30" viewBox="0 0 100 10" preserveAspectRatio="none">
@@ -56,31 +56,19 @@ export function HeroSection({ onGetStarted, onLogin }: HeroSectionProps) {
 
           {/* Subheadline */}
           <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Track your bucket list, compete with friends, and celebrate every
-            milestone in the ultimate gamified goal-tracking experience.
+            Join thousands tracking epic adventures, earning points, and making memories that matter—one goal at a time.
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
             <Button
               asChild
-              size="xl"
-              className="min-h-[56px] px-8 text-lg rounded-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all hover:scale-105 shadow-lg shadow-primary/25"
+              size="lg"
+              className="px-8 text-lg bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity focus:outline-none"
               onClick={onGetStarted}
             >
               <Link href="/auth/signup" aria-label="Sign up to start your journey with Bucketly">
-                Start Your Journey
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="xl"
-              variant="outline"
-              className="min-h-[56px] px-8 text-lg rounded-full border-2 hover:bg-muted/50 transition-all hover:scale-105"
-              onClick={onLogin}
-            >
-              <Link href="/auth/login" aria-label="Log in to your Bucketly account">
-                Log In
+                Start Checking Things Off
               </Link>
             </Button>
           </div>
