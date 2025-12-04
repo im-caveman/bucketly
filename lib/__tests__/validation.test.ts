@@ -32,6 +32,16 @@ describe('validateEmail', () => {
     expect(result.isValid).toBe(false)
     expect(result.error).toContain('valid email')
   })
+
+  it('should validate email with subdomain', () => {
+    const result = validateEmail('test@test.co.uk')
+    expect(result.isValid).toBe(true)
+  })
+
+  it('should reject email with consecutive dots', () => {
+    const result = validateEmail('test@domain..com')
+    expect(result.isValid).toBe(false)
+  })
 })
 
 describe('validatePassword', () => {
