@@ -70,7 +70,8 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // Next.js requires unsafe-eval and unsafe-inline
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' blob:", // Next.js requires unsafe-eval and unsafe-inline
+              "worker-src 'self' blob:", // Allow web workers from blobs
               "style-src 'self' 'unsafe-inline'", // Tailwind requires unsafe-inline
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",

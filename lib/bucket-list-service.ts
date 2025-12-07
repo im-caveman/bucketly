@@ -546,23 +546,117 @@ export async function deleteBucketItem(itemId: string) {
 export type CreateMemoryData = Omit<MemoryInsert, 'id' | 'user_id' | 'created_at' | 'updated_at'>
 
 export async function createMemory(userId: string, memoryData: CreateMemoryData) {
-  const { data, error } = await supabase
-    .from('memories')
-    .insert({
-      user_id: userId,
-      bucket_item_id: memoryData.bucket_item_id,
-      reflection: memoryData.reflection,
-      photos: memoryData.photos,
-      is_public: memoryData.is_public,
-    })
-    .select()
+  // 1. Get item details for the timeline event
+  const { data: item, error: itemError } = await supabase
+    .from('bucket_items')
+    .select(`
+      *,
+      bucket_lists (
+        name,
+        category
+      )
+    `)
+    .eq('id', memoryData.bucket_item_id)
     .single()
 
-  if (error) {
-    throw error
+  if (itemError) throw itemError
+  if (!item) throw new Error('Item not found')
+
+  // 2. Check for existing memory
+  const { data: existingMemory } = await supabase
+    .from('memories')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('bucket_item_id', memoryData.bucket_item_id)
+    .maybeSingle()
+
+  let memoryId: string
+  let actionType: 'created' | 'updated' = 'created'
+
+  if (existingMemory) {
+    // Update existing
+    const { data, error } = await supabase
+      .from('memories')
+      .update({
+        reflection: memoryData.reflection,
+        photos: memoryData.photos,
+        is_public: memoryData.is_public,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', existingMemory.id)
+      .select()
+      .single()
+
+    if (error) throw error
+    memoryId = data.id
+    actionType = 'updated'
+  } else {
+    // Insert new
+    const { data, error } = await supabase
+      .from('memories')
+      .insert({
+        user_id: userId,
+        bucket_item_id: memoryData.bucket_item_id,
+        reflection: memoryData.reflection,
+        photos: memoryData.photos,
+        is_public: memoryData.is_public,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    memoryId = data.id
   }
 
-  return data
+  // 3. Create timeline event if public
+  if (memoryData.is_public) {
+    const title = actionType === 'created'
+      ? `Shared a memory: ${item.title}`
+      : `Updated memory: ${item.title}`
+
+    await supabase.from('timeline_events').insert({
+      user_id: userId,
+      event_type: 'memory_shared',
+      title: title,
+      description: memoryData.reflection,
+      metadata: {
+        memory_id: memoryId,
+        item_id: item.id,
+        item_title: item.title,
+        list_name: item.bucket_lists?.name,
+        category: item.bucket_lists?.category,
+        photos: memoryData.photos,
+        is_update: actionType === 'updated'
+      },
+      is_public: true
+    })
+  }
+
+  return { id: memoryId }
+}
+
+export async function deleteMemory(memoryId: string, userId: string) {
+  // 1. Delete timeline events associated with this memory
+  // We use the JSON containment operator to find events with metadata->memory_id matches
+  const { error: timelineError } = await supabase
+    .from('timeline_events')
+    .delete()
+    .eq('user_id', userId)
+    .contains('metadata', { memory_id: memoryId })
+
+  if (timelineError) {
+    // Log but continue, as cleaning up the memory is primary
+    console.error('Error deleting timeline events:', timelineError)
+  }
+
+  // 2. Delete the memory itself
+  const { error } = await supabase
+    .from('memories')
+    .delete()
+    .eq('id', memoryId)
+    .eq('user_id', userId)
+
+  if (error) throw error
 }
 
 export async function uploadMemoryPhoto(userId: string, file: File): Promise<string> {
@@ -618,6 +712,30 @@ export async function fetchMemoriesForItem(itemId: string) {
     throw error
   }
 
+  // Deduplicate: Keep only the latest memory per bucket_item_id
+  const uniqueMemories = data.reduce((acc: any[], current) => {
+    const isDuplicate = acc.find(item => item.bucket_item_id === current.bucket_item_id)
+    if (!isDuplicate) {
+      acc.push(current)
+    }
+    return acc
+  }, [])
+
+  return uniqueMemories
+}
+
+export async function fetchUserMemoryForItem(itemId: string, userId: string) {
+  const { data, error } = await supabase
+    .from('memories')
+    .select('id, user_id, bucket_item_id')
+    .eq('bucket_item_id', itemId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
   return data
 }
 
@@ -639,7 +757,8 @@ export async function fetchMemoriesForUser(userId: string) {
         bucket_list_id,
         bucket_lists (
           id,
-          name
+          name,
+          category
         )
       )
     `)
@@ -673,46 +792,7 @@ export async function updateMemory(memoryId: string, updates: UpdateMemoryData) 
   return data
 }
 
-export async function deleteMemory(memoryId: string) {
-  // First, fetch the memory to get photo URLs
-  const { data: memory, error: fetchError } = await supabase
-    .from('memories')
-    .select('photos, user_id')
-    .eq('id', memoryId)
-    .single()
 
-  if (fetchError) {
-    throw fetchError
-  }
-
-  // Delete photos from storage
-  if (memory.photos && Array.isArray(memory.photos) && memory.photos.length > 0) {
-    const photoPaths = (memory.photos as string[]).map((url: string) => {
-      // Extract the path from the public URL
-      const urlParts = url.split('/memory-photos/')
-      return urlParts[1] || url
-    })
-
-    const { error: storageError } = await supabase.storage
-      .from('memory-photos')
-      .remove(photoPaths)
-
-    if (storageError) {
-      console.error('Error deleting photos from storage:', storageError)
-      // Continue with memory deletion even if photo deletion fails
-    }
-  }
-
-  // Delete the memory record
-  const { error } = await supabase
-    .from('memories')
-    .delete()
-    .eq('id', memoryId)
-
-  if (error) {
-    throw error
-  }
-}
 
 export async function deleteMemoryPhoto(photoUrl: string) {
   // Extract the path from the public URL

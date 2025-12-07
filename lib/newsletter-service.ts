@@ -48,27 +48,29 @@ export async function subscribeToNewsletter(
       .eq('email', email.toLowerCase().trim())
       .maybeSingle()
 
+    const existingSubscription = existing as unknown as NewsletterSubscription | null
+
     // Handle check error (but ignore "not found" errors)
     if (checkError && checkError.code !== 'PGRST116') {
       logError(checkError, { context: 'subscribeToNewsletter', email, action: 'check' })
       throw checkError
     }
 
-    if (existing) {
+    if (existingSubscription) {
       // If exists but unsubscribed, resubscribe
-      if (!existing.subscribed) {
+      if (!existingSubscription.subscribed) {
         const { data, error } = await supabase
           .from('newsletter_subscriptions')
           .update({
             subscribed: true,
             subscribed_at: new Date().toISOString(),
             unsubscribed_at: null,
-            user_id: userId || existing.user_id,
+            user_id: userId || existingSubscription.user_id,
             source,
-            metadata: { ...existing.metadata, ...metadata },
+            metadata: { ...existingSubscription.metadata, ...metadata },
             updated_at: new Date().toISOString(),
           })
-          .eq('id', existing.id)
+          .eq('id', existingSubscription.id)
           .select()
           .single()
 
@@ -85,7 +87,7 @@ export async function subscribeToNewsletter(
       }
 
       // Already subscribed - return existing subscription
-      return existing as NewsletterSubscription
+      return existingSubscription as NewsletterSubscription
     }
 
     // Create new subscription
@@ -148,16 +150,14 @@ export async function checkSubscriptionStatus(email: string): Promise<boolean> {
       .select('subscribed')
       .eq('email', email.toLowerCase().trim())
       .eq('subscribed', true)
-      .single()
+      .maybeSingle()
 
     if (error) {
-      // If no record found, user is not subscribed
-      if (error.code === 'PGRST116') {
-        return false
-      }
       logError(error, { context: 'checkSubscriptionStatus', email })
       throw handleSupabaseError(error)
     }
+
+    return data?.subscribed ?? false
 
     return data?.subscribed ?? false
   } catch (error) {

@@ -19,22 +19,29 @@ interface UploadMemoryDialogProps {
   itemId: string
   itemTitle: string
   userId: string
+  initialData?: {
+    reflection: string
+    photos: string[]
+    isPublic: boolean
+  }
 }
 
-export function UploadMemoryDialog({ 
-  isOpen, 
-  onClose, 
-  onMemoryUploaded, 
-  itemId, 
+
+export function UploadMemoryDialog({
+  isOpen,
+  onClose,
+  onMemoryUploaded,
+  itemId,
   itemTitle,
-  userId 
+  userId,
+  initialData
 }: UploadMemoryDialogProps) {
   const { toast } = useToast()
+  const [reflection, setReflection] = useState(initialData?.reflection || "")
+  const [isPublic, setIsPublic] = useState(initialData?.isPublic ?? true)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [reflection, setReflection] = useState("")
-  const [isPublic, setIsPublic] = useState(true)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
-  const [previewUrls, setPreviewUrls] = useState<string[]>([])
+  const [previewUrls, setPreviewUrls] = useState<string[]>(initialData?.photos || [])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -59,7 +66,7 @@ export function UploadMemoryDialog({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-    
+
     // Validate file types
     const validFiles = files.filter(file => {
       const typeValidation = validateImageType(file)
@@ -89,7 +96,7 @@ export function UploadMemoryDialog({
   const removePhoto = (index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index))
     setPreviewUrls(prev => prev.filter((_, i) => i !== index))
-    
+
     // Clear the specific error if it exists
     setErrors(prev => {
       const newErrors = { ...prev }
@@ -134,7 +141,7 @@ export function UploadMemoryDialog({
       setSelectedFiles([])
       setPreviewUrls([])
       setErrors({})
-      
+
       onMemoryUploaded()
       onClose()
     } catch (error: any) {
@@ -199,7 +206,7 @@ export function UploadMemoryDialog({
                     ))}
                   </div>
                 )}
-                
+
                 <Button
                   type="button"
                   variant="outline"
