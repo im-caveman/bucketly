@@ -490,9 +490,9 @@ export async function recalculateUserStats(userId: string) {
   const totalPoints = userItems?.reduce((sum, item) => sum + (item.points || 0), 0) || 0
   const itemsCompleted = userItems?.length || 0
 
-  // 2. Update profile
+  // 2. Update user stats
   await supabase
-    .from('profiles')
+    .from('users')
     .update({
       total_points: totalPoints,
       items_completed: itemsCompleted

@@ -36,6 +36,7 @@ import { fetchUserProfile, subscribeToProfileUpdates, type UserProfile } from "@
 import { useUserProfile } from "@/hooks/use-profile"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useEffect, useState } from "react"
+import { BookOpen } from "lucide-react"
 import { UserHoverCard } from "@/components/profile/user-hover-card"
 
 const data = {
@@ -72,6 +73,11 @@ const data = {
           title: "Create List",
           url: "/create",
           icon: PlusCircleIcon,
+        },
+        {
+          title: "Blog",
+          url: "/blog",
+          icon: BookOpen,
         },
       ],
     },

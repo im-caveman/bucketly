@@ -10,7 +10,7 @@ import { ListCompletionModal } from "@/components/bucket-list/list-completion-mo
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { fetchBucketListById, toggleItemCompletion, createMemory, uploadMemoryPhoto, fetchUserMemoryForItem, deleteMemory, type BucketListWithItems } from "@/lib/bucket-list-service"
+import { fetchBucketListById, toggleItemCompletion, createMemory, uploadMemoryPhoto, fetchUserMemoryForItem, deleteMemory, followBucketList, unfollowBucketList, type BucketListWithItems } from "@/lib/bucket-list-service"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
@@ -49,6 +49,8 @@ export function ListDetailClient() {
         isOpen: false,
         itemId: null
     })
+    const [isFollowing, setIsFollowing] = useState(false)
+    const [followLoading, setFollowLoading] = useState(false)
 
     useEffect(() => {
         async function loadList() {
@@ -59,6 +61,7 @@ export function ListDetailClient() {
                 const data = await fetchBucketListById(params.id as string, user?.id)
                 setList(data)
                 setItems(data.bucket_items || [])
+                setIsFollowing(data.isFollowing || false)
             } catch (err) {
                 console.error("Error loading list:", err)
                 setError("Failed to load list details")
@@ -76,6 +79,41 @@ export function ListDetailClient() {
         if (filter === "incomplete") return !item.completed
         return true
     })
+
+    const handleFollowToggle = async () => {
+        if (!user || !list) {
+            toast.error("Please log in to follow lists")
+            return
+        }
+
+        setFollowLoading(true)
+        const wasFollowing = isFollowing
+
+        try {
+            // Optimistic update
+            setIsFollowing(!wasFollowing)
+            setList(prev => prev ? { ...prev, follower_count: prev.follower_count + (wasFollowing ? -1 : 1) } : prev)
+
+            if (wasFollowing) {
+                await unfollowBucketList(user.id, list.id)
+                toast.success("Unfollowed list")
+            } else {
+                await followBucketList(user.id, list.id)
+                toast.success("Following list! 🎉")
+            }
+
+            // Trigger update for dashboard
+            window.dispatchEvent(new CustomEvent('bucketly:list-follow-update'))
+        } catch (error) {
+            // Revert optimistic update
+            setIsFollowing(wasFollowing)
+            setList(prev => prev ? { ...prev, follower_count: prev.follower_count + (wasFollowing ? 1 : -1) } : prev)
+            console.error("Failed to toggle follow:", error)
+            toast.error(wasFollowing ? "Failed to unfollow" : "Failed to follow")
+        } finally {
+            setFollowLoading(false)
+        }
+    }
 
     const handleCompletionModalClose = () => {
         setCompletionModal({ isOpen: false, item: null })
@@ -300,9 +338,19 @@ export function ListDetailClient() {
                             title={`Check out this bucket list: ${list.name}`}
                             description={list.description || undefined}
                         />
-                        <Button size="lg" className="gap-2">
-                            <span>❤️</span>
-                            {list.isFollowing ? "Following" : "Follow"}
+                        <Button
+                            size="lg"
+                            className="gap-2"
+                            onClick={handleFollowToggle}
+                            disabled={followLoading}
+                            variant={isFollowing ? "outline" : "default"}
+                        >
+                            {followLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <span>{isFollowing ? "💔" : "❤️"}</span>
+                            )}
+                            {isFollowing ? "Unfollow" : "Follow"}
                         </Button>
                     </div>
                 </div>

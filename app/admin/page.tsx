@@ -9,8 +9,9 @@ import { AdminListManager } from "@/components/admin/admin-list-manager"
 import { AdminNotificationManager } from "@/components/admin/admin-notification-manager"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, ListChecks, Users, Settings, Bell, Award } from "lucide-react"
+import { Loader2, ListChecks, Users, Settings, Bell, Award, BookOpen } from "lucide-react"
 import { AdminBadgeManager } from "@/components/admin/admin-badge-manager"
+import { BlogPostList } from "@/components/admin/BlogPostList"
 
 export default function AdminPage() {
     const { user } = useAuth()
@@ -52,7 +53,7 @@ export default function AdminPage() {
 
                 {/* Admin Tabs */}
                 <Tabs defaultValue="lists" className="space-y-6">
-                    <TabsList className="grid w-full max-w-2xl grid-cols-4">
+                    <TabsList className="grid w-full max-w-3xl grid-cols-5">
                         <TabsTrigger value="lists" className="gap-2">
                             <ListChecks className="h-4 w-4" />
                             Lists
@@ -68,6 +69,10 @@ export default function AdminPage() {
                         <TabsTrigger value="badges" className="gap-2">
                             <Award className="h-4 w-4" />
                             Badges
+                        </TabsTrigger>
+                        <TabsTrigger value="blog" className="gap-2">
+                            <BookOpen className="h-4 w-4" />
+                            Blog
                         </TabsTrigger>
                     </TabsList>
 
@@ -149,6 +154,24 @@ export default function AdminPage() {
                             </CardHeader>
                             <CardContent className="pt-4">
                                 <AdminBadgeManager />
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Blog Management Tab */}
+                    <TabsContent value="blog" className="mt-6">
+                        <Card>
+                            <CardHeader className="pb-4 !h-auto min-h-[auto]">
+                                <CardTitle className="flex items-center gap-2 mb-2">
+                                    <BookOpen className="h-5 w-5" />
+                                    Blog Management
+                                </CardTitle>
+                                <CardDescription className="mt-0 text-sm leading-relaxed">
+                                    Create and manage blog posts for user education and SEO
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="pt-4">
+                                <BlogPostList />
                             </CardContent>
                         </Card>
                     </TabsContent>
