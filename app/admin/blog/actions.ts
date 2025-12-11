@@ -8,11 +8,13 @@ import {
     getPostById as getPostByIdService,
 } from '@/lib/blog-service'
 import type { BlogPostFormData, BlogListFilters } from '@/types/blog'
+import { verifyAdmin } from '@/lib/admin-auth'
 
 /**
  * Server action to get all posts for admin
  */
 export async function getAllPostsAdminAction(filters?: BlogListFilters) {
+    await verifyAdmin()
     return await getAllPostsAdmin(filters)
 }
 
@@ -20,6 +22,7 @@ export async function getAllPostsAdminAction(filters?: BlogListFilters) {
  * Server action to delete a post
  */
 export async function deletePostAction(postId: string) {
+    await verifyAdmin()
     return await deletePostService(postId)
 }
 
@@ -27,6 +30,13 @@ export async function deletePostAction(postId: string) {
  * Server action to create a post
  */
 export async function createPostAction(postData: any, authorId: string) {
+    const user = await verifyAdmin()
+
+    // Ensure the authorId matches the authenticated admin user
+    if (authorId !== user.id) {
+        throw new Error('Unauthorized: Author ID mismatch')
+    }
+
     // Convert comma-separated tags to array
     const tags = postData.tags
         .split(',')
@@ -49,6 +59,8 @@ export async function createPostAction(postData: any, authorId: string) {
  * Server action to update a post
  */
 export async function updatePostAction(postId: string, postData: any) {
+    await verifyAdmin()
+
     // Convert comma-separated tags to array
     const tags = postData.tags
         .split(',')
@@ -71,5 +83,6 @@ export async function updatePostAction(postId: string, postData: any) {
  * Server action to get a post by ID
  */
 export async function getPostByIdAction(postId: string) {
+    await verifyAdmin()
     return await getPostByIdService(postId)
 }
