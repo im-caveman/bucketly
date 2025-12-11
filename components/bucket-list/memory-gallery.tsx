@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState, useEffect, useCallback } from "react"
+import Image from "next/image"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useToast } from "@/hooks/use-toast"
 import { fetchMemoriesForItem } from "@/lib/bucket-list-service"
@@ -38,11 +38,7 @@ export function MemoryGallery({ itemId, currentUserId, onEdit, onDelete }: Memor
   const [isLoading, setIsLoading] = useState(true)
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null)
 
-  useEffect(() => {
-    loadMemories()
-  }, [itemId])
-
-  const loadMemories = async () => {
+  const loadMemories = useCallback(async () => {
     setIsLoading(true)
     try {
       const data = await fetchMemoriesForItem(itemId)
@@ -65,7 +61,11 @@ export function MemoryGallery({ itemId, currentUserId, onEdit, onDelete }: Memor
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [itemId, currentUserId, toast])
+
+  useEffect(() => {
+    loadMemories()
+  }, [loadMemories])
 
   const handleMemoryClick = (memory: Memory) => {
     setSelectedMemory(memory)
@@ -135,10 +135,12 @@ export function MemoryGallery({ itemId, currentUserId, onEdit, onDelete }: Memor
             >
               {memory.photos && memory.photos.length > 0 && (
                 <div className="relative aspect-video">
-                  <img
+                  <Image
                     src={memory.photos[0]}
                     alt="Memory"
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                   {memory.photos.length > 1 && (
                     <Badge className="absolute top-2 right-2 bg-black/70 text-white">
@@ -176,10 +178,12 @@ export function MemoryGallery({ itemId, currentUserId, onEdit, onDelete }: Memor
                 {memory.profiles && memory.user_id !== currentUserId && (
                   <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                     {memory.profiles.avatar_url && (
-                      <img
+                      <Image
                         src={memory.profiles.avatar_url}
                         alt={memory.profiles.username}
-                        className="w-6 h-6 rounded-full"
+                        width={24}
+                        height={24}
+                        className="rounded-full"
                       />
                     )}
                     <span className="text-sm text-muted-foreground">
