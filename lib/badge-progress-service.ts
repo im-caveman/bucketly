@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { UserProfile } from './bucket-list-service'
+import type { UserProfile } from '@/types/bucket-list'
 
 export interface BadgeProgress {
     badgeId: string
