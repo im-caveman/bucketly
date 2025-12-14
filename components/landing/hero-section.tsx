@@ -42,7 +42,7 @@ export function HeroSection({ onGetStarted, onLogin }: HeroSectionProps) {
 
           {/* Headline */}
           <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold tracking-tight" id="hero-heading">
-            Life's Too Short for<br />
+            Life&apos;s Too Short for<br />
             <span className="relative inline-block whitespace-nowrap">
               <span className="bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent animate-gradient-x bg-[length:200%_auto]">
                 Incomplete Bucket Lists

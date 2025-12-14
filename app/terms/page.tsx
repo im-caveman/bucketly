@@ -63,7 +63,7 @@ export default function TermsPage() {
                                 You agree to not use the Service to:
                             </p>
                             <ul className="list-disc pl-6 mt-2 space-y-2 text-muted-foreground">
-                                <li>Upload, post, email, transmit or otherwise make available any content that is unlawful, harmful, threatening, abusive, harassing, tortuous, defamatory, vulgar, obscene, libelous, invasive of another's privacy, hateful, or racially, ethnically or otherwise objectionable.</li>
+                                <li>Upload, post, email, transmit or otherwise make available any content that is unlawful, harmful, threatening, abusive, harassing, tortuous, defamatory, vulgar, obscene, libelous, invasive of another&apos;s privacy, hateful, or racially, ethnically or otherwise objectionable.</li>
                                 <li>Impersonate any person or entity, including, but not limited to, a Bucketly official, forum leader, guide or host, or falsely state or otherwise misrepresent your affiliation with a person or entity.</li>
                                 <li>Forge headers or otherwise manipulate identifiers in order to disguise the origin of any content transmitted through the Service.</li>
                             </ul>
