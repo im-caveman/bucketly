@@ -92,7 +92,7 @@ export function AdminListManager() {
             <div className="text-center py-12">
                 <p className="text-muted-foreground mb-2">No public lists yet</p>
                 <p className="text-sm text-muted-foreground">
-                    Create your first public list using the "Create Public List" tab
+                    Create your first public list using the &quot;Create Public List&quot; tab
                 </p>
             </div>
         )

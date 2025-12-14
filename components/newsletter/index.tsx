@@ -91,7 +91,7 @@ export default function Newsletter() {
         title: "Success! 🎉",
         description: user 
           ? "You've been subscribed to our newsletter. Check your notifications for a welcome message!"
-          : "You've been subscribed to our newsletter. We'll keep you updated!",
+          : "You've been subscribed to our newsletter. We&apos;ll keep you updated!",
       })
 
       // Reset to expanded state after 3 seconds
@@ -112,7 +112,7 @@ export default function Newsletter() {
           setState("success")
           toast({
             title: "Already subscribed",
-            description: "You're already on our newsletter list!",
+            description: "You&apos;re already on our newsletter list!",
           })
           setTimeout(() => {
             setState("expanded")
@@ -217,7 +217,7 @@ export default function Newsletter() {
                   transition={{ delay: 0.2 }}
                   className="text-sm text-muted-foreground max-w-sm"
                 >
-                  You'll receive updates about new features, tips, and inspiring stories from our community.
+                    You&apos;ll receive updates about new features, tips, and inspiring stories from our community.
                 </motion.p>
               </motion.div>
             )}
@@ -272,7 +272,7 @@ export default function Newsletter() {
                           animate={{ opacity: 1 }}
                           className="text-xs text-muted-foreground text-center"
                         >
-                          ✓ You're already subscribed
+                          ✓ You&apos;re already subscribed
                         </motion.p>
                       )}
                     </div>

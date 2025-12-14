@@ -285,7 +285,7 @@ export default function MemoriesPage() {
                               </div>
 
                               <p className="text-foreground leading-relaxed italic">
-                                "{memory.reflection}"
+                                &quot;{memory.reflection}&quot;
                               </p>
 
                               <div className="flex items-center justify-between pt-2">

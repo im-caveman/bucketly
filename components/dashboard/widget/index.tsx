@@ -204,7 +204,7 @@ export default function Widget({ widgetData }: WidgetProps) {
               >
                 <div className="text-xs uppercase tracking-widest text-primary mb-2">Daily Insight</div>
                 <blockquote className="text-lg font-medium italic leading-snug">
-                  "{quote}"
+                  &quot;{quote}&quot;
                 </blockquote>
               </motion.div>
             )}

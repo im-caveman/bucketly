@@ -22,7 +22,7 @@ export function ListCompletionModal({ isOpen, listTitle, listId, totalPoints, on
                 <DialogHeader>
                     <DialogTitle>List Completed! 🏆</DialogTitle>
                     <DialogDescription>
-                        Incredible! You've completed every item in "{listTitle}". Here is your official certificate.
+                        Incredible! You&apos;ve completed every item in &quot;{listTitle}&quot;. Here is your official certificate.
                     </DialogDescription>
                 </DialogHeader>
 

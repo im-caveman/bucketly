@@ -56,7 +56,7 @@ export function DeleteItemDialog({ isOpen, onClose, onItemDeleted, itemId, itemT
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Bucket List Item</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete "{itemTitle}"? This action cannot be undone.
+            Are you sure you want to delete &quot;{itemTitle}&quot;? This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

@@ -173,7 +173,7 @@ export function UploadMemoryDialog({
         <DialogHeader>
           <DialogTitle>Upload Memory</DialogTitle>
           <DialogDescription>
-            Share your experience completing "{itemTitle}"
+            Share your experience completing &quot;{itemTitle}&quot;
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>

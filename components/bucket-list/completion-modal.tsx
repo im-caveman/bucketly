@@ -92,7 +92,7 @@ export function CompletionModal({ isOpen, itemTitle, itemPoints, onClose, onSave
           <DialogHeader>
             <DialogTitle>Success! 🎉</DialogTitle>
             <DialogDescription>
-              You've completed "{itemTitle}" and earned +{itemPoints} points!
+              You&apos;ve completed &quot;{itemTitle}&quot; and earned +{itemPoints} points!
             </DialogDescription>
           </DialogHeader>
 

@@ -502,7 +502,7 @@ export default function CreateListPage() {
                     </div>
                   </div>
 
-                  <p className="text-xs text-muted-foreground">Custom items don't earn points</p>
+                  <p className="text-xs text-muted-foreground">Custom items don&apos;t earn points</p>
                   <Button onClick={handleAddCustomItem} className="w-full gap-2">
                     + Add Item
                   </Button>

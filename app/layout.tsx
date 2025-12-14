@@ -5,14 +5,14 @@ import type { Metadata } from "next"
 import { V0Provider } from "@/lib/v0-context"
 import localFont from "next/font/local"
 import { SidebarProvider } from "@/components/ui/sidebar"
-import mockDataJson from "@/mock.json"
 import type { MockData } from "@/types/dashboard"
 import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/contexts/auth-context"
 import { SWRConfigProvider } from "@/contexts/swr-config-provider"
 import { LayoutContent } from "../components/layout-content"
+import { defaultDashboardData } from "@/lib/default-data"
 
-const mockData = mockDataJson as MockData
+const mockData = defaultDashboardData
 
 const robotoMono = Roboto_Mono({
   variable: "--font-roboto-mono",
