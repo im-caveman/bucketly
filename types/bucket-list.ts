@@ -19,6 +19,23 @@ export type Category = DbCategory
 export type Difficulty = DbDifficulty
 export type TimelineEventType = DbTimelineEventType
 
+export interface BucketListWithItems {
+  id: string
+  user_id: string
+  name: string
+  description: string | null
+  category: Category
+  is_public: boolean
+  follower_count: number
+  created_at: string
+  updated_at: string
+  bucket_items: DbBucketItem[]
+  profiles: {
+    username: string
+    avatar_url: string | null
+  }
+}
+
 /**
  * Frontend representation of a bucket list item
  * Extends database type with camelCase properties for UI consistency
@@ -103,11 +120,13 @@ export function toBucketList(
   }
 }
 
+export type UserProfile = DbProfile
+
 /**
  * Frontend representation of a user profile
  * Adapts database profile with camelCase properties
  */
-export interface UserProfile {
+export interface UserProfileFrontend {
   id: string
   username: string
   avatar: string
@@ -124,7 +143,7 @@ export interface UserProfile {
 /**
  * Convert database profile to frontend format
  */
-export function toUserProfile(dbProfile: DbProfile): UserProfile {
+export function toUserProfile(dbProfile: DbProfile): UserProfileFrontend {
   return {
     id: dbProfile.id,
     username: dbProfile.username,

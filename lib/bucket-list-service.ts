@@ -18,23 +18,10 @@ import type {
   ProfileUpdate,
   GlobalItem,
 } from '@/types/supabase'
+import { checkAndAwardBadges } from './badge-progress-service'
+import type { BucketListWithItems, UserProfile } from '@/types/bucket-list'
 
-export interface BucketListWithItems {
-  id: string
-  user_id: string
-  name: string
-  description: string | null
-  category: Category
-  is_public: boolean
-  follower_count: number
-  created_at: string
-  updated_at: string
-  bucket_items: BucketItem[]
-  profiles: {
-    username: string
-    avatar_url: string | null
-  }
-}
+export type { BucketListWithItems, UserProfile }
 
 export async function fetchUserBucketLists(userId: string) {
   try {
@@ -293,6 +280,92 @@ export async function updateBucketList(listId: string, updates: UpdateBucketList
   return data
 }
 
+export interface CreateBucketListParams {
+  userId: string
+  name: string
+  description?: string
+  category: Category
+  isPublic: boolean
+  items: Array<{
+    title: string
+    description?: string
+    points?: number
+    difficulty?: Difficulty
+    location?: string
+    target_value?: number
+    unit_type?: string
+  }>
+}
+
+export async function createBucketList({
+  userId,
+  name,
+  description,
+  category,
+  isPublic,
+  items,
+}: CreateBucketListParams) {
+  // 1. Create the bucket list
+  const { data: bucketList, error: listError } = await supabase
+    .from('bucket_lists')
+    .insert({
+      user_id: userId,
+      name: name.trim(),
+      description: description?.trim() || null,
+      category,
+      is_public: isPublic,
+    })
+    .select()
+    .single()
+
+  if (listError) {
+    throw handleSupabaseError(listError)
+  }
+
+  // 2. Insert items if any
+  if (items && items.length > 0) {
+    const itemsToInsert = items.map((item) => ({
+      bucket_list_id: bucketList.id,
+      title: item.title,
+      description: item.description || null,
+      points: item.points || 0,
+      difficulty: item.difficulty || null,
+      location: item.location || null,
+      target_value: item.target_value || 0,
+      unit_type: item.unit_type || null,
+      current_value: 0,
+    }))
+
+    const { error: itemsError } = await supabase
+      .from('bucket_items')
+      .insert(itemsToInsert)
+
+    if (itemsError) {
+      throw handleSupabaseError(itemsError)
+    }
+  }
+
+  // 3. Create timeline event
+  await supabase.from('timeline_events').insert({
+    user_id: userId,
+    event_type: 'list_created',
+    title: `Created: ${name}`,
+    description: `Started a new ${category} bucket list`,
+    metadata: {
+      list_id: bucketList.id,
+      category,
+      items_count: items.length,
+    },
+    is_public: isPublic,
+  })
+
+  // 4. Update stats and award badges
+  await updateProfileStats(userId)
+  await checkAndAwardBadges(userId)
+
+  return bucketList
+}
+
 export async function deleteBucketList(listId: string) {
   const { error } = await supabase
     .from('bucket_lists')
@@ -446,6 +519,8 @@ export async function toggleItemCompletion(itemId: string, completed: boolean) {
   // Recalculate global ranks after item completion
   if (completed) {
     await recalculateGlobalRanks()
+    // Award badges
+    await checkAndAwardBadges(userId)
   }
 
   return data
@@ -492,7 +567,7 @@ export async function recalculateUserStats(userId: string) {
 
   // 2. Update user stats
   await supabase
-    .from('users')
+    .from('profiles')
     .update({
       total_points: totalPoints,
       items_completed: itemsCompleted
@@ -831,6 +906,10 @@ export async function followBucketList(userId: string, listId: string) {
     }
     throw error
   }
+
+  // Update stats and check for badges (e.g. lists_following)
+  await updateProfileStats(userId)
+  await checkAndAwardBadges(userId)
 
   return data
 }
