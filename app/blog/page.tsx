@@ -1,15 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { BlogCard } from '@/components/blog/BlogCard'
 import { BlogSearchWrapper } from '@/components/blog/BlogSearchWrapper'
 import type { BlogCategory, BlogPost } from '@/types/blog'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export default function BlogPage() {
+function BlogContent() {
     const searchParams = useSearchParams()
     const category = searchParams.get('category') as BlogCategory | null
     const search = searchParams.get('search') || ''
@@ -110,7 +110,7 @@ export default function BlogPage() {
 
                 {loading ? (
                     <div className="text-center py-12">
-                        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
                         <p className="mt-4 text-muted-foreground">Loading posts...</p>
                     </div>
                 ) : (
@@ -154,5 +154,17 @@ export default function BlogPage() {
                 )}
             </div>
         </div>
+    )
+}
+
+export default function BlogPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        }>
+            <BlogContent />
+        </Suspense>
     )
 }
