@@ -27,9 +27,14 @@ import {
 } from "@/components/ui/alert-dialog"
 
 import { UploadMemoryDialog } from "@/components/bucket-list/upload-memory-dialog"
+import { AddItemDialog } from "@/components/bucket-list/add-item-dialog"
+import { EditListDialog } from "@/components/bucket-list/edit-list-dialog"
+import { DeleteListDialog } from "@/components/bucket-list/delete-list-dialog"
+import { useRouter } from "next/navigation"
 
 export function ListDetailClient() {
     const params = useParams()
+    const router = useRouter()
     const { user } = useAuth()
     const [list, setList] = useState<BucketListWithItems & { isFollowing: boolean } | null>(null)
     const [items, setItems] = useState<any[]>([])
@@ -52,25 +57,33 @@ export function ListDetailClient() {
     const [isFollowing, setIsFollowing] = useState(false)
     const [followLoading, setFollowLoading] = useState(false)
 
-    useEffect(() => {
-        async function loadList() {
-            if (!params.id) return
+    // Management dialogs state
+    const [isAddItemOpen, setIsAddItemOpen] = useState(false)
+    const [isEditListOpen, setIsEditListOpen] = useState(false)
+    const [isDeleteListOpen, setIsDeleteListOpen] = useState(false)
 
-            try {
-                setLoading(true)
-                const data = await fetchBucketListById(params.id as string, user?.id)
-                setList(data)
-                setItems(data.bucket_items || [])
-                setIsFollowing(data.isFollowing || false)
-            } catch (err) {
-                console.error("Error loading list:", err)
-                setError("Failed to load list details")
-                toast.error("Failed to load list details")
-            } finally {
-                setLoading(false)
-            }
+    // Check if current user is owner
+    const isOwner = user?.id === list?.user_id
+
+    const loadList = async () => {
+        if (!params.id) return
+
+        try {
+            setLoading(true)
+            const data = await fetchBucketListById(params.id as string, user?.id)
+            setList(data)
+            setItems(data.bucket_items || [])
+            setIsFollowing(data.isFollowing || false)
+        } catch (err) {
+            console.error("Error loading list:", err)
+            setError("Failed to load list details")
+            toast.error("Failed to load list details")
+        } finally {
+            setLoading(false)
         }
+    }
 
+    useEffect(() => {
         loadList()
     }, [params.id, user?.id])
 
@@ -329,29 +342,45 @@ export function ListDetailClient() {
                         <div className="flex items-center gap-2">
                             <Badge variant="secondary">{list.follower_count.toLocaleString()} followers</Badge>
                             <Badge variant="outline">Created by {list.profiles?.username || "Unknown"}</Badge>
-
+                            {!list.is_public && <Badge variant="outline" className="bg-muted">Private</Badge>}
                         </div>
                     </div>
-                    <div className="flex gap-2 shrink-0">
-                        <SocialShare
-                            url={typeof window !== 'undefined' ? window.location.href : ''}
-                            title={`Check out this bucket list: ${list.name}`}
-                            description={list.description || undefined}
-                        />
-                        <Button
-                            size="lg"
-                            className="gap-2"
-                            onClick={handleFollowToggle}
-                            disabled={followLoading}
-                            variant={isFollowing ? "outline" : "default"}
-                        >
-                            {followLoading ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <span>{isFollowing ? "💔" : "❤️"}</span>
-                            )}
-                            {isFollowing ? "Unfollow" : "Follow"}
-                        </Button>
+                    <div className="flex flex-col gap-2 shrink-0">
+                        <div className="flex gap-2 justify-end">
+                            <SocialShare
+                                url={typeof window !== 'undefined' ? window.location.href : ''}
+                                title={`Check out this bucket list: ${list.name}`}
+                                description={list.description || undefined}
+                            />
+                            <Button
+                                size="lg"
+                                className="gap-2"
+                                onClick={handleFollowToggle}
+                                disabled={followLoading}
+                                variant={isFollowing ? "outline" : "default"}
+                            >
+                                {followLoading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <span>{isFollowing ? "💔" : "❤️"}</span>
+                                )}
+                                {isFollowing ? "Unfollow" : "Follow"}
+                            </Button>
+                        </div>
+
+                        {isOwner && (
+                            <div className="flex gap-2 justify-end">
+                                <Button variant="outline" onClick={() => setIsEditListOpen(true)}>
+                                    Edit List
+                                </Button>
+                                <Button variant="outline" onClick={() => setIsAddItemOpen(true)}>
+                                    + Add Item
+                                </Button>
+                                <Button variant="destructive" size="icon" onClick={() => setIsDeleteListOpen(true)}>
+                                    🗑️
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -417,6 +446,41 @@ export function ListDetailClient() {
                     itemTitle={uploadMemoryModal.item.title}
                     userId={user.id}
                 />
+            )}
+
+            {isOwner && (
+                <>
+                    <AddItemDialog
+                        isOpen={isAddItemOpen}
+                        onClose={() => setIsAddItemOpen(false)}
+                        onItemAdded={() => {
+                            loadList()
+                            setIsAddItemOpen(false)
+                        }}
+                        listId={list.id}
+                        category={list.category}
+                    />
+
+                    <EditListDialog
+                        isOpen={isEditListOpen}
+                        onClose={() => setIsEditListOpen(false)}
+                        onListUpdated={() => {
+                            loadList()
+                            setIsEditListOpen(false)
+                        }}
+                        list={list}
+                    />
+
+                    <DeleteListDialog
+                        isOpen={isDeleteListOpen}
+                        onClose={() => setIsDeleteListOpen(false)}
+                        onListDeleted={() => {
+                            router.push(`/profile/${user.username}`)
+                        }}
+                        listId={list.id}
+                        listName={list.name}
+                    />
+                </>
             )}
 
             <AlertDialog open={uncheckDialog.isOpen} onOpenChange={(open) => !open && setUncheckDialog({ ...uncheckDialog, isOpen: false })}>

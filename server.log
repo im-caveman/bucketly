@@ -1,0 +1,191 @@
+
+> my-v0-project@0.1.0 dev
+> next dev
+
+   ▲ Next.js 16.0.8 (Turbopack)
+   - Local:         http://localhost:3000
+   - Network:       http://192.168.0.2:3000
+
+ ✓ Starting...
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+ ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+ ✓ Ready in 1807ms
+Middleware running for path: /
+ ⨯ Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at middleware (middleware.ts:19:38)
+  17 |
+  18 |   // Create a Supabase client configured to use cookies
+> 19 |   const supabase = createServerClient(
+     |                                      ^
+  20 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  21 |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  22 |     {
+ GET / 404 in 1772ms (compile: -155690µs, proxy.ts: 1762ms, render: 165ms)
+Middleware running for path: /profile/testuser
+ ⨯ Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at middleware (middleware.ts:19:38)
+  17 |
+  18 |   // Create a Supabase client configured to use cookies
+> 19 |   const supabase = createServerClient(
+     |                                      ^
+  20 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  21 |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  22 |     {
+ GET /profile/testuser 404 in 135ms (compile: -11173µs, proxy.ts: 132ms, render: 13ms)
+ ○ Compiling /_not-found/page ...
+ ⨯ Error: Missing NEXT_PUBLIC_SUPABASE_URL environment variable. Please check your .env.local file and ensure it contains a valid Supabase URL. See docs/ENVIRONMENT_VARIABLES.md for setup instructions.
+    at module evaluation (lib/supabase.ts:9:9)
+    at module evaluation (contexts/auth-context.tsx:5:1)
+   7 |
+   8 | if (!supabaseUrl) {
+>  9 |   throw new Error(
+     |         ^
+  10 |     'Missing NEXT_PUBLIC_SUPABASE_URL environment variable. ' +
+  11 |     'Please check your .env.local file and ensure it contains a valid Supabase URL. ' +
+  12 |     'See docs/ENVIRONMENT_VARIABLES.md for setup instructions.' {
+  digest: '2987108635'
+}
+ ⨯ Error: Missing NEXT_PUBLIC_SUPABASE_URL environment variable. Please check your .env.local file and ensure it contains a valid Supabase URL. See docs/ENVIRONMENT_VARIABLES.md for setup instructions.
+    at module evaluation (lib/supabase.ts:9:9)
+    at module evaluation (contexts/auth-context.tsx:5:1)
+   7 |
+   8 | if (!supabaseUrl) {
+>  9 |   throw new Error(
+     |         ^
+  10 |     'Missing NEXT_PUBLIC_SUPABASE_URL environment variable. ' +
+  11 |     'Please check your .env.local file and ensure it contains a valid Supabase URL. ' +
+  12 |     'See docs/ENVIRONMENT_VARIABLES.md for setup instructions.' {
+  digest: '2987108635'
+}
+Middleware running for path: /
+ ⨯ Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at middleware (middleware.ts:19:38)
+  17 |
+  18 |   // Create a Supabase client configured to use cookies
+> 19 |   const supabase = createServerClient(
+     |                                      ^
+  20 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  21 |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  22 |     {
+ GET / 404 in 238ms (compile: -39943µs, proxy.ts: 233ms, render: 44ms)
+ ⨯ Error: Missing NEXT_PUBLIC_SUPABASE_URL environment variable. Please check your .env.local file and ensure it contains a valid Supabase URL. See docs/ENVIRONMENT_VARIABLES.md for setup instructions.
+    at module evaluation (lib/supabase.ts:9:9)
+    at module evaluation (contexts/auth-context.tsx:5:1)
+   7 |
+   8 | if (!supabaseUrl) {
+>  9 |   throw new Error(
+     |         ^
+  10 |     'Missing NEXT_PUBLIC_SUPABASE_URL environment variable. ' +
+  11 |     'Please check your .env.local file and ensure it contains a valid Supabase URL. ' +
+  12 |     'See docs/ENVIRONMENT_VARIABLES.md for setup instructions.' {
+  digest: '2987108635'
+}
+Middleware running for path: /profile/testuser
+ ⨯ Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at middleware (middleware.ts:19:38)
+  17 |
+  18 |   // Create a Supabase client configured to use cookies
+> 19 |   const supabase = createServerClient(
+     |                                      ^
+  20 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  21 |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  22 |     {
+ GET /profile/testuser 404 in 59ms (compile: -11801µs, proxy.ts: 56ms, render: 14ms)
+ ⨯ Error: Missing NEXT_PUBLIC_SUPABASE_URL environment variable. Please check your .env.local file and ensure it contains a valid Supabase URL. See docs/ENVIRONMENT_VARIABLES.md for setup instructions.
+    at module evaluation (lib/supabase.ts:9:9)
+    at module evaluation (contexts/auth-context.tsx:5:1)
+   7 |
+   8 | if (!supabaseUrl) {
+>  9 |   throw new Error(
+     |         ^
+  10 |     'Missing NEXT_PUBLIC_SUPABASE_URL environment variable. ' +
+  11 |     'Please check your .env.local file and ensure it contains a valid Supabase URL. ' +
+  12 |     'See docs/ENVIRONMENT_VARIABLES.md for setup instructions.' {
+  digest: '2987108635'
+}
+Middleware running for path: /
+ ⨯ Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at middleware (middleware.ts:19:38)
+  17 |
+  18 |   // Create a Supabase client configured to use cookies
+> 19 |   const supabase = createServerClient(
+     |                                      ^
+  20 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  21 |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  22 |     {
+ GET / 404 in 84ms (compile: -18186µs, proxy.ts: 79ms, render: 22ms)
+ ⨯ Error: Missing NEXT_PUBLIC_SUPABASE_URL environment variable. Please check your .env.local file and ensure it contains a valid Supabase URL. See docs/ENVIRONMENT_VARIABLES.md for setup instructions.
+    at module evaluation (lib/supabase.ts:9:9)
+    at module evaluation (contexts/auth-context.tsx:5:1)
+   7 |
+   8 | if (!supabaseUrl) {
+>  9 |   throw new Error(
+     |         ^
+  10 |     'Missing NEXT_PUBLIC_SUPABASE_URL environment variable. ' +
+  11 |     'Please check your .env.local file and ensure it contains a valid Supabase URL. ' +
+  12 |     'See docs/ENVIRONMENT_VARIABLES.md for setup instructions.' {
+  digest: '2987108635'
+}
+Middleware running for path: /profile/testuser
+ ⨯ Error: Your project's URL and Key are required to create a Supabase client!
+
+Check your Supabase project's API settings to find these values
+
+https://supabase.com/dashboard/project/_/settings/api
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at <unknown> (https://supabase.com/dashboard/project/_/settings/api)
+    at middleware (middleware.ts:19:38)
+  17 |
+  18 |   // Create a Supabase client configured to use cookies
+> 19 |   const supabase = createServerClient(
+     |                                      ^
+  20 |     process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  21 |     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  22 |     {
+ GET /profile/testuser 404 in 105ms (compile: -23801µs, proxy.ts: 100ms, render: 29ms)
+ ⨯ Error: Missing NEXT_PUBLIC_SUPABASE_URL environment variable. Please check your .env.local file and ensure it contains a valid Supabase URL. See docs/ENVIRONMENT_VARIABLES.md for setup instructions.
+    at module evaluation (lib/supabase.ts:9:9)
+    at module evaluation (contexts/auth-context.tsx:5:1)
+   7 |
+   8 | if (!supabaseUrl) {
+>  9 |   throw new Error(
+     |         ^
+  10 |     'Missing NEXT_PUBLIC_SUPABASE_URL environment variable. ' +
+  11 |     'Please check your .env.local file and ensure it contains a valid Supabase URL. ' +
+  12 |     'See docs/ENVIRONMENT_VARIABLES.md for setup instructions.' {
+  digest: '2987108635'
+}
