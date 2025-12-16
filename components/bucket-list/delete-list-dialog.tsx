@@ -58,7 +58,7 @@ export function DeleteListDialog({ isOpen, onClose, onListDeleted, listId, listN
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Bucket List?</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete <span className="font-semibold text-foreground">"{listName}"</span>?
+            Are you sure you want to delete <span className="font-semibold text-foreground">&quot;{listName}&quot;</span>?
             This action cannot be undone. All items, progress, and memories associated with this list will be permanently removed.
           </AlertDialogDescription>
         </AlertDialogHeader>
