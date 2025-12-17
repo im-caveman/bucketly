@@ -57,6 +57,8 @@ mock.json
 
 # IDE settings
 .vscode/
+.cursor/
+.gemini/
 
 # generated reports
 **/lighthouse-report.json

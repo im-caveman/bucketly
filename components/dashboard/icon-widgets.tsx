@@ -72,6 +72,58 @@ export function IconWidgets() {
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
+  // Notification Handlers
+  const handleMarkAsRead = async (id: string) => {
+    if (!user?.id) return
+
+    // Optimistically update UI
+    setNotifications((prev) =>
+      prev.map((notif) => (notif.id === id ? { ...notif, read: true } : notif))
+    )
+
+    try {
+      await markNotificationAsRead(id, user.id)
+    } catch (error) {
+      console.error("Error marking notification as read:", error)
+      // Revert on error
+      setNotifications((prev) =>
+        prev.map((notif) => (notif.id === id ? { ...notif, read: false } : notif))
+      )
+    }
+  }
+
+  const handleDeleteNotification = async (id: string) => {
+    if (!user?.id) return
+
+    // Optimistically update UI
+    setNotifications((prev) => prev.filter((notif) => notif.id !== id))
+
+    try {
+      await deleteNotification(id, user.id)
+    } catch (error) {
+      console.error("Error deleting notification:", error)
+      // Reload on error
+      const fetchedNotifications = await fetchUserNotifications(user.id)
+      setNotifications(fetchedNotifications)
+    }
+  }
+
+  const handleClearAll = async () => {
+    if (!user?.id) return
+
+    // Optimistically clear UI
+    setNotifications([])
+
+    try {
+      await deleteAllNotifications(user.id)
+    } catch (error) {
+      console.error("Error clearing notifications:", error)
+      // Reload on error
+      const fetchedNotifications = await fetchUserNotifications(user.id)
+      setNotifications(fetchedNotifications)
+    }
+  }
+
   const toggleWidget = (widget: ActiveWidget) => {
     setActiveWidget((prev) => (prev === widget ? null : widget))
   }
@@ -99,7 +151,13 @@ export function IconWidgets() {
 
       {/* Expandable Content */}
       {activeWidget === "notifications" && (
-        <Notifications initialNotifications={notifications} />
+        <Notifications
+          notifications={notifications}
+          isLoading={isLoading}
+          onMarkAsRead={handleMarkAsRead}
+          onDelete={handleDeleteNotification}
+          onClearAll={handleClearAll}
+        />
       )}
       {activeWidget === "badges" && (
         <BadgePreview />

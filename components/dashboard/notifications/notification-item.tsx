@@ -4,6 +4,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { Notification } from "@/types/dashboard"
 
@@ -103,11 +104,12 @@ export default function NotificationItem({ notification, onMarkAsRead, onDelete 
                 </div>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="icon"
                   onClick={handleClearClick}
-                  className="opacity-0 hover:opacity-100 transition-opacity text-xs h-6 px-2 text-muted-foreground hover:text-destructive shrink-0"
+                  className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
                 >
-                  clear
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Clear</span>
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
