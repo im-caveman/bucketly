@@ -1,91 +1,49 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { useState } from "react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
-import { updateBucketList, type UpdateBucketListData } from "@/lib/bucket-list-service"
-import type { Category } from "@/types/bucket-list"
+import { validateListName } from "@/lib/validation"
+import { handleSupabaseError, formatErrorMessage } from "@/lib/error-handler"
+import type { BucketListWithItems } from "@/lib/bucket-list-service"
 
 interface EditListDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  listId: string
-  currentName: string
-  currentDescription: string
-  currentCategory: Category
-  currentIsPublic: boolean
-  onSuccess?: () => void
+  isOpen: boolean
+  onClose: () => void
+  onListUpdated: () => void
+  list: BucketListWithItems
 }
 
-const categoriesList = [
-  { id: "adventures", label: "Adventures", icon: "🎯" },
-  { id: "places", label: "Places", icon: "🌍" },
-  { id: "cuisines", label: "Cuisines", icon: "🍽️" },
-  { id: "books", label: "Books", icon: "📚" },
-  { id: "songs", label: "Songs", icon: "🎵" },
-  { id: "monuments", label: "Monuments", icon: "🏛️" },
-  { id: "acts-of-service", label: "Acts of Service", icon: "🤝" },
-  { id: "miscellaneous", label: "Miscellaneous", icon: "✨" },
-] as const
-
-export function EditListDialog({
-  open,
-  onOpenChange,
-  listId,
-  currentName,
-  currentDescription,
-  currentCategory,
-  currentIsPublic,
-  onSuccess,
-}: EditListDialogProps) {
+export function EditListDialog({ isOpen, onClose, onListUpdated, list }: EditListDialogProps) {
   const { toast } = useToast()
-  const [name, setName] = useState(currentName)
-  const [description, setDescription] = useState(currentDescription)
-  const [category, setCategory] = useState<Category>(currentCategory)
-  const [isPublic, setIsPublic] = useState(currentIsPublic)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [validationError, setValidationError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (open) {
-      setName(currentName)
-      setDescription(currentDescription)
-      setCategory(currentCategory)
-      setIsPublic(currentIsPublic)
-      setValidationError(null)
-    }
-  }, [open, currentName, currentDescription, currentCategory, currentIsPublic])
+  const [formData, setFormData] = useState({
+    name: list.name,
+    description: list.description || "",
+    is_public: list.is_public,
+  })
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   const validateForm = () => {
-    if (!name.trim()) {
-      setValidationError("List name is required")
-      return false
+    const newErrors: Record<string, string> = {}
+
+    const nameValidation = validateListName(formData.name)
+    if (!nameValidation.isValid) {
+      newErrors.name = nameValidation.error!
     }
-    if (name.trim().length < 3) {
-      setValidationError("List name must be at least 3 characters")
-      return false
-    }
-    if (name.trim().length > 100) {
-      setValidationError("List name must be less than 100 characters")
-      return false
-    }
-    setValidationError(null)
-    return true
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
     if (!validateForm()) {
       return
     }
@@ -93,27 +51,26 @@ export function EditListDialog({
     setIsSubmitting(true)
 
     try {
-      const updates: UpdateBucketListData = {
-        name: name.trim(),
-        description: description.trim() || null,
-        category,
-        is_public: isPublic,
-      }
+      const { updateBucketList } = await import("@/lib/bucket-list-service")
 
-      await updateBucketList(listId, updates)
-
-      toast({
-        title: "Success!",
-        description: "Bucket list updated successfully",
+      await updateBucketList(list.id, {
+        name: formData.name,
+        description: formData.description || null,
+        is_public: formData.is_public,
       })
 
-      onOpenChange(false)
-      onSuccess?.()
+      toast({
+        title: "List updated",
+        description: "Your bucket list has been updated successfully.",
+      })
+
+      onListUpdated()
+      onClose()
     } catch (error: any) {
-      console.error("Error updating bucket list:", error)
+      const apiError = handleSupabaseError(error)
       toast({
         title: "Error",
-        description: error.message || "Failed to update bucket list",
+        description: formatErrorMessage(apiError),
         variant: "destructive",
       })
     } finally {
@@ -121,75 +78,81 @@ export function EditListDialog({
     }
   }
 
+  const handleClose = () => {
+    if (!isSubmitting) {
+      // Reset form to list values on close (or partial reset)
+      // Actually best to keep edited values if reopen?
+      // Standard practice: reset on cancel/close to avoid stale state.
+      setFormData({
+        name: list.name,
+        description: list.description || "",
+        is_public: list.is_public,
+      })
+      setErrors({})
+      onClose()
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Bucket List</DialogTitle>
-          <DialogDescription>Make changes to your bucket list details</DialogDescription>
+          <DialogDescription>
+            Update the details of your bucket list.
+          </DialogDescription>
         </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">
+                List Name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Travel the World"
+                disabled={isSubmitting}
+              />
+              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+            </div>
 
-        <div className="space-y-4 py-4">
-          <div>
-            <Label htmlFor="edit-name">List Name</Label>
-            <Input
-              id="edit-name"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value)
-                if (validationError) setValidationError(null)
-              }}
-              placeholder="e.g., Travel the World"
-            />
-            {validationError && <p className="text-sm text-destructive mt-1">{validationError}</p>}
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Describe your bucket list..."
+                rows={3}
+                disabled={isSubmitting}
+              />
+            </div>
 
-          <div>
-            <Label htmlFor="edit-description">Description</Label>
-            <Textarea
-              id="edit-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="What's this list about?"
-              className="min-h-20"
-            />
-          </div>
-
-          <div>
-            <Label className="mb-2 block">Category</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {categoriesList.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setCategory(cat.id as Category)}
-                  className={`p-2 rounded-lg border-2 transition-all text-left ${
-                    category === cat.id ? "border-primary bg-primary/10" : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  <span className="text-xl">{cat.icon}</span>
-                  <p className="font-semibold text-sm mt-1">{cat.label}</p>
-                </button>
-              ))}
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div>
+                <Label htmlFor="is_public" className="font-semibold">Make Public</Label>
+                <p className="text-sm text-muted-foreground">Others can find and follow your list</p>
+              </div>
+              <Switch
+                id="is_public"
+                checked={formData.is_public}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_public: checked })}
+                disabled={isSubmitting}
+              />
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <div>
-              <p className="font-semibold">Make Public</p>
-              <p className="text-sm text-muted-foreground">Others can find and follow your list</p>
-            </div>
-            <Switch checked={isPublic} onCheckedChange={setIsPublic} />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : "Save Changes"}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Updating..." : "Update List"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )

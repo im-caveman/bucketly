@@ -12,17 +12,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast"
-import { deleteBucketList } from "@/lib/bucket-list-service"
+import { handleSupabaseError, formatErrorMessage } from "@/lib/error-handler"
 
 interface DeleteListDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  isOpen: boolean
+  onClose: () => void
+  onListDeleted: () => void
   listId: string
   listName: string
-  onSuccess?: () => void
 }
 
-export function DeleteListDialog({ open, onOpenChange, listId, listName, onSuccess }: DeleteListDialogProps) {
+export function DeleteListDialog({ isOpen, onClose, onListDeleted, listId, listName }: DeleteListDialogProps) {
   const { toast } = useToast()
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -30,40 +30,49 @@ export function DeleteListDialog({ open, onOpenChange, listId, listName, onSucce
     setIsDeleting(true)
 
     try {
+      const { deleteBucketList } = await import("@/lib/bucket-list-service")
+
       await deleteBucketList(listId)
 
       toast({
-        title: "Deleted",
-        description: "Bucket list has been deleted successfully",
+        title: "List deleted",
+        description: "Your bucket list has been deleted successfully.",
       })
 
-      onOpenChange(false)
-      onSuccess?.()
+      onListDeleted()
+      onClose()
     } catch (error: any) {
-      console.error("Error deleting bucket list:", error)
+      const apiError = handleSupabaseError(error)
       toast({
         title: "Error",
-        description: error.message || "Failed to delete bucket list",
+        description: formatErrorMessage(apiError),
         variant: "destructive",
       })
-    } finally {
       setIsDeleting(false)
     }
   }
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={isOpen} onOpenChange={(open) => !isDeleting && onClose()}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogTitle>Delete Bucket List?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently delete <strong>{listName}</strong> and all its items. This action cannot be undone.
+            Are you sure you want to delete <span className="font-semibold text-foreground">&quot;{listName}&quot;</span>?
+            This action cannot be undone. All items, progress, and memories associated with this list will be permanently removed.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            {isDeleting ? "Deleting..." : "Delete"}
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault()
+              handleDelete()
+            }}
+            disabled={isDeleting}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isDeleting ? "Deleting..." : "Delete List"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

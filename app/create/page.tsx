@@ -246,6 +246,19 @@ export default function CreateListPage() {
         is_public: isPublic,
       })
 
+      // Automatically follow the created list
+      const { error: followError } = await supabase
+        .from('list_followers')
+        .insert({
+          user_id: user.id,
+          bucket_list_id: bucketList.id,
+        })
+
+      if (followError) {
+        console.error('Error following created list:', followError)
+        // We don't block the success flow if following fails, but we log it
+      }
+
       toast({
         title: "Success!",
         description: "Your bucket list has been created",
