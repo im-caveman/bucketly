@@ -7,11 +7,12 @@ import { CategoryFilter } from "@/components/bucket-list/category-filter"
 import { UserStats } from "@/components/bucket-list/user-stats"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { LayoutGrid, List as ListIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { Category, BucketList, UserProfile } from "@/types/bucket-list"
 import { toBucketList, toUserProfile } from "@/types/bucket-list"
-import { fetchUserProfile } from "@/lib/bucket-list-service"
+import { fetchUserProfile, fetchUserBucketLists } from "@/lib/bucket-list-service"
 import { supabase } from "@/lib/supabase"
 
 export default function DashboardPage() {
@@ -23,6 +24,7 @@ export default function DashboardPage() {
   const [followedLists, setFollowedLists] = useState<BucketList[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list")
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -44,79 +46,39 @@ export default function DashboardPage() {
         const profile = await fetchUserProfile(user.id)
         setUserProfile(toUserProfile(profile))
 
-        // Fetch followed lists with items
-        const { data: followedListsData, error: listsError } = await supabase
-          .from('list_followers')
-          .select(`
-            bucket_list_id,
-            bucket_lists (
-              id,
-              user_id,
-              name,
-              description,
-              category,
-              is_public,
-              follower_count,
-              created_at,
-              updated_at,
-              bucket_items (
-                id,
-                bucket_list_id,
-                title,
-                description,
-                points,
-                difficulty,
-                location,
-                completed,
-                completed_date,
-                created_at,
-                updated_at
-              ),
-              profiles (
-                username,
-                avatar_url
-              )
-            )
-          `)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
+        // Fetch user's bucket lists (includes both created and shadow copies)
+        const userLists = await fetchUserBucketLists(user.id)
 
-        if (listsError) throw listsError
+
+
 
         // Transform data to BucketList format
-        const lists: BucketList[] = (followedListsData
-          ?.map((item: any) => {
-            const list = item.bucket_lists
-            if (!list) return null
+        const transformedLists = userLists.map((list) => {
+          const transformedList = toBucketList(
+            {
+              id: list.id,
+              user_id: list.user_id,
+              name: list.name,
+              description: list.description,
+              category: list.category,
+              is_public: list.is_public,
+              follower_count: list.follower_count,
+              created_at: list.created_at,
+              updated_at: list.updated_at,
+              origin_id: list.origin_id, // CRITICAL: Include origin_id for ownership detection
+            },
+            list.bucket_items || [],
+            true // isFollowing is true for user's own lists in this context
+          )
 
-            return toBucketList(
-              {
-                id: list.id,
-                user_id: list.user_id,
-                name: list.name,
-                description: list.description,
-                category: list.category,
-                is_public: list.is_public,
-                follower_count: list.follower_count,
-                created_at: list.created_at,
-                updated_at: list.updated_at,
-              },
-              list.bucket_items || [],
-              true // isFollowing is true since these are followed lists
-            )
-          })
-          .filter((list): list is BucketList => list !== null) || [])
-
-        // Add creator username to lists
-        const listsWithCreator = lists.map((list: any, index: number) => {
-          const originalList = followedListsData?.[index]?.bucket_lists
           return {
-            ...list,
-            createdBy: originalList?.profiles?.username || 'Unknown User'
+            ...transformedList,
+            createdBy: list.profiles?.username || 'Unknown User'
           }
         })
 
-        setFollowedLists(listsWithCreator)
+
+        setFollowedLists(transformedLists)
       } catch (err) {
         console.error('Error loading dashboard data:', err)
         setError('Failed to load dashboard data. Please try again.')
@@ -136,6 +98,8 @@ export default function DashboardPage() {
       list.description.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesCategory && matchesSearch
   })
+
+
 
   // Show loading state
   if (authLoading || loading) {
@@ -175,6 +139,7 @@ export default function DashboardPage() {
             <div>
               <h1 className="font-display text-4xl font-bold mb-2">Your Bucket List</h1>
               <p className="text-lg text-muted-foreground">Track your dreams, celebrate your achievements</p>
+
             </div>
             <Link href="/create">
               <Button size="lg" className="gap-2">
@@ -201,9 +166,32 @@ export default function DashboardPage() {
           <CategoryFilter selected={selectedCategory} onChange={setSelectedCategory} />
         </div>
 
-        {/* Lists Grid */}
-        <div className="space-y-3">
-          <h2 className="font-display text-2xl font-bold">Following</h2>
+        {/* Lists Grid Section */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-2xl font-bold">My Lists</h2>
+            <div className="flex items-center gap-1 bg-muted p-1 rounded-lg border">
+              <Button
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="h-8 w-8 p-0"
+                title="List View"
+              >
+                <ListIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "grid" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+                className="h-8 w-8 p-0"
+                title="Grid View"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
           {filteredLists.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-lg text-muted-foreground mb-4">
@@ -216,11 +204,46 @@ export default function DashboardPage() {
               </Link>
             </div>
           ) : (
-            <div className="flex flex-col gap-6">
-              {filteredLists.map((list) => (
-                <ListCard key={list.id} list={list} compact />
-              ))}
-            </div>
+            viewMode === "list" ? (
+              <div className="flex flex-col gap-6">
+                {filteredLists.map((list) => (
+                  <ListCard
+                    key={list.id}
+                    list={list}
+                    compact
+                    showCreator={false}
+                    isOwner={!list.origin_id}
+                    onEdit={!list.origin_id ? () => {
+                      // Handle edit for owned lists
+                      console.log('Edit list:', list.id)
+                    } : undefined}
+                    onDelete={!list.origin_id ? () => {
+                      // Handle delete for owned lists
+                      console.log('Delete list:', list.id)
+                    } : undefined}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredLists.map((list) => (
+                  <ListCard
+                    key={list.id}
+                    list={list}
+                    showCreator={false}
+                    isOwner={!list.origin_id}
+                    onEdit={!list.origin_id ? () => {
+                      // Handle edit for owned lists
+                      console.log('Edit list:', list.id)
+                    } : undefined}
+                    onDelete={!list.origin_id ? () => {
+                      // Handle delete for owned lists
+                      console.log('Delete list:', list.id)
+                    } : undefined}
+                  />
+                ))}
+              </div>
+            )
           )}
         </div>
       </div>

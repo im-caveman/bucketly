@@ -65,7 +65,7 @@ export default function CreateListPage() {
   const [listName, setListName] = useState("")
   const [listCategory, setListCategory] = useState<Category>("miscellaneous")
   const [description, setDescription] = useState("")
-  const [isPublic, setIsPublic] = useState(false) // Default to private for non-admin users
+  const [isPublic, setIsPublic] = useState(false) // Default to private
   const [selectedItems, setSelectedItems] = useState<ListItem[]>([])
   const [customItems, setCustomItems] = useState<CustomListItem[]>([])
   const [addMode, setAddMode] = useState<"search" | "custom">("search")
@@ -572,7 +572,7 @@ export default function CreateListPage() {
                     </div>
                     <div className="pt-2">
                       <Badge variant={isPublic ? "default" : "secondary"}>
-                        {isPublic ? "🌍 Public" : "🔒 Private"}
+                        {isPublic ? "🌍 Public" : "🔒 Private (Only visible to you)"}
                       </Badge>
                     </div>
                   </div>

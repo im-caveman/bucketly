@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,18 +16,44 @@ interface EditListDialogProps {
   isOpen: boolean
   onClose: () => void
   onListUpdated: () => void
-  list: BucketListWithItems
+  list: BucketListWithItems | null
 }
 
 export function EditListDialog({ isOpen, onClose, onListUpdated, list }: EditListDialogProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
-    name: list.name,
-    description: list.description || "",
-    is_public: list.is_public,
+    name: "",
+    description: "",
+    is_public: false,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Sync form data when list changes or dialog opens
+  useEffect(() => {
+    if (list && isOpen) {
+      setFormData({
+        name: list.name,
+        description: list.description || "",
+        is_public: list.is_public,
+      })
+      setErrors({})
+    }
+  }, [list, isOpen])
+
+  // Safety check to ensure body is unlocked when dialog closes or unmounts
+  useEffect(() => {
+    const cleanup = () => {
+      document.body.style.pointerEvents = ""
+    }
+
+    if (!isOpen) {
+      const timer = setTimeout(cleanup, 500)
+      return () => clearTimeout(timer)
+    }
+
+    return cleanup
+  }, [isOpen])
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -51,6 +77,7 @@ export function EditListDialog({ isOpen, onClose, onListUpdated, list }: EditLis
     setIsSubmitting(true)
 
     try {
+      if (!list) return
       const { updateBucketList } = await import("@/lib/bucket-list-service")
 
       await updateBucketList(list.id, {
@@ -64,8 +91,11 @@ export function EditListDialog({ isOpen, onClose, onListUpdated, list }: EditLis
         description: "Your bucket list has been updated successfully.",
       })
 
-      onListUpdated()
       onClose()
+      // Wait a moment for the dialog to close before refreshing data
+      setTimeout(() => {
+        onListUpdated()
+      }, 100)
     } catch (error: any) {
       const apiError = handleSupabaseError(error)
       toast({
@@ -80,15 +110,6 @@ export function EditListDialog({ isOpen, onClose, onListUpdated, list }: EditLis
 
   const handleClose = () => {
     if (!isSubmitting) {
-      // Reset form to list values on close (or partial reset)
-      // Actually best to keep edited values if reopen?
-      // Standard practice: reset on cancel/close to avoid stale state.
-      setFormData({
-        name: list.name,
-        description: list.description || "",
-        is_public: list.is_public,
-      })
-      setErrors({})
       onClose()
     }
   }

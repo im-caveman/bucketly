@@ -24,16 +24,18 @@ export interface BucketListWithItems {
   user_id: string
   name: string
   description: string | null
-  category: Category
+  category: string
   is_public: boolean
   follower_count: number
   created_at: string
   updated_at: string
-  bucket_items: DbBucketItem[]
-  profiles: {
+  origin_id?: string | null
+  bucket_items: BucketListItem[]
+  profiles?: {
     username: string
     avatar_url: string | null
   }
+  isFollowing?: boolean
 }
 
 /**
@@ -95,6 +97,7 @@ export interface BucketList {
   isPublic: boolean
   createdAt?: string
   updatedAt?: string
+  origin_id?: string | null
 }
 
 /**
@@ -117,6 +120,7 @@ export function toBucketList(
     isPublic: dbList.is_public,
     createdAt: dbList.created_at,
     updatedAt: dbList.updated_at,
+    origin_id: (dbList as any).origin_id || null,
   }
 }
 
@@ -136,6 +140,7 @@ export interface UserProfileFrontend {
   itemsCompleted: number
   listsFollowing: number
   listsCreated: number
+  isPrivate: boolean
   createdAt?: string
   updatedAt?: string
 }
@@ -143,7 +148,7 @@ export interface UserProfileFrontend {
 /**
  * Convert database profile to frontend format
  */
-export function toUserProfile(dbProfile: DbProfile): UserProfileFrontend {
+export function toUserProfile(dbProfile: any): UserProfileFrontend {
   return {
     id: dbProfile.id,
     username: dbProfile.username,
@@ -154,6 +159,7 @@ export function toUserProfile(dbProfile: DbProfile): UserProfileFrontend {
     itemsCompleted: dbProfile.items_completed,
     listsFollowing: dbProfile.lists_following,
     listsCreated: dbProfile.lists_created,
+    isPrivate: dbProfile.is_private || false,
     createdAt: dbProfile.created_at,
     updatedAt: dbProfile.updated_at,
   }

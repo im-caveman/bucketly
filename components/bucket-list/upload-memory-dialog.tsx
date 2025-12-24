@@ -5,9 +5,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
-import { X, Upload, Image as ImageIcon } from "lucide-react"
+import { X, Upload } from "lucide-react"
 import { createMemory, uploadMemoryPhoto } from "@/lib/bucket-list-service"
 import { validateReflection, validateFileSize, validateImageType } from "@/lib/validation"
 import { handleSupabaseError, formatErrorMessage } from "@/lib/error-handler"
@@ -22,10 +21,8 @@ interface UploadMemoryDialogProps {
   initialData?: {
     reflection: string
     photos: string[]
-    isPublic: boolean
   }
 }
-
 
 export function UploadMemoryDialog({
   isOpen,
@@ -38,7 +35,6 @@ export function UploadMemoryDialog({
 }: UploadMemoryDialogProps) {
   const { toast } = useToast()
   const [reflection, setReflection] = useState(initialData?.reflection || "")
-  const [isPublic, setIsPublic] = useState(initialData?.isPublic ?? true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>(initialData?.photos || [])
@@ -127,7 +123,7 @@ export function UploadMemoryDialog({
         bucket_item_id: itemId,
         reflection,
         photos: photoUrls,
-        is_public: isPublic,
+        is_public: false,
       })
 
       toast({
@@ -137,7 +133,6 @@ export function UploadMemoryDialog({
 
       // Reset form
       setReflection("")
-      setIsPublic(true)
       setSelectedFiles([])
       setPreviewUrls([])
       setErrors({})
@@ -159,7 +154,6 @@ export function UploadMemoryDialog({
   const handleClose = () => {
     if (!isSubmitting) {
       setReflection("")
-      setIsPublic(true)
       setSelectedFiles([])
       setPreviewUrls([])
       setErrors({})
@@ -254,23 +248,6 @@ export function UploadMemoryDialog({
               </div>
             </div>
 
-            {/* Privacy Toggle */}
-            <div className="flex items-center justify-between space-x-2 p-4 border border-border rounded-lg">
-              <div className="space-y-0.5">
-                <Label htmlFor="is-public" className="cursor-pointer">
-                  Make this memory public
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Public memories can be seen by others in your social feed
-                </p>
-              </div>
-              <Switch
-                id="is-public"
-                checked={isPublic}
-                onCheckedChange={setIsPublic}
-                disabled={isSubmitting}
-              />
-            </div>
           </div>
 
           <DialogFooter>

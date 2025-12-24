@@ -10,7 +10,10 @@ import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2, Twitter, Instagram, Linkedin, Github, Globe, UserPlus, UserMinus } from "lucide-react"
 import { fetchUserProfile, fetchUserBucketLists, fetchUserTimeline } from "@/lib/bucket-list-service"
-import type { UserProfile } from "@/lib/bucket-list-service"
+import type { UserProfile, BucketListWithItems } from "@/lib/bucket-list-service"
+import { ListCard } from "@/components/bucket-list/list-card"
+import { EditListDialog } from '@/components/bucket-list/edit-list-dialog'
+import { DeleteListDialog } from '@/components/bucket-list/delete-list-dialog'
 import { useUserFollow } from "@/hooks/use-user-follow"
 import { useUserBadges } from "@/hooks/use-badges"
 import Link from "next/link"
@@ -27,10 +30,15 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   const { username } = React.use(params)
   const { user: currentUser } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [bucketLists, setBucketLists] = useState<any[]>([])
+  const [createdLists, setCreatedLists] = useState<BucketListWithItems[]>([])
   const [timeline, setTimeline] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Dialog states
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [selectedList, setSelectedList] = useState<BucketListWithItems | null>(null)
 
   // Determine if viewing own profile and setup follow hook
   const isOwnProfile = currentUser?.id === profile?.id
@@ -60,7 +68,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
   const fetchProfileData = async () => {
     try {
-      setLoading(true)
+      if (!profile) setLoading(true)
       setError(null)
 
       // First, find the user by username
@@ -74,9 +82,11 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
       setProfile(userData as UserProfile)
 
-      // Fetch user's bucket lists
-      const lists = await fetchUserBucketLists(userData.id)
-      setBucketLists(lists)
+      // Fetch user's bucket lists (only owned lists for profile page)
+      const lists = (await fetchUserBucketLists(userData.id, true)) as any[]
+      // Additional robust filtering to ensure no shadow copies slip through
+      const ownedLists = lists.filter(list => !list.origin_id)
+      setCreatedLists(ownedLists)
 
       // Fetch user's timeline
       const timelineData = await fetchUserTimeline(userData.id)
@@ -107,6 +117,24 @@ export default function ProfilePage({ params }: ProfilePageProps) {
           <p className="text-destructive mb-4">{error || 'Profile not found'}</p>
           <Button onClick={fetchProfileData}>Try Again</Button>
         </div>
+      </div>
+    )
+  }
+
+  // Check if profile is private and viewer is not the owner
+  if (profile.is_private && !isOwnProfile) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="size-24 mb-6 rounded-full bg-muted flex items-center justify-center text-4xl">
+          🔒
+        </div>
+        <h2 className="font-display text-2xl font-bold mb-2">This Profile is Private</h2>
+        <p className="text-muted-foreground text-center max-w-md">
+          {profile.username} has set their profile to private. Only they can view their activity and progress.
+        </p>
+        <Link href="/" className="mt-6">
+          <Button variant="outline">Back to Home</Button>
+        </Link>
       </div>
     )
   }
@@ -333,40 +361,12 @@ export default function ProfilePage({ params }: ProfilePageProps) {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="created" className="mb-8 mt-6">
-          <TabsList>
-            <TabsTrigger value="created">Lists Created</TabsTrigger>
+        <Tabs defaultValue="activity" className="mb-8 mt-6">
+          <TabsList className="mb-4">
             <TabsTrigger value="activity">Recent Activity</TabsTrigger>
+            <TabsTrigger value="created">Lists Created</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="created" className="space-y-4">
-            {bucketLists.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No lists created yet.</p>
-              </div>
-            ) : (
-              bucketLists.map((list) => (
-                <Link key={list.id} href={`/list/${list.id}`} className="block">
-                  <Card className="transition-all hover:border-primary hover:shadow-md">
-                    <CardHeader>
-                      <CardTitle className="flex items-center justify-between">
-                        <span>{list.name}</span>
-                        <div className="flex gap-2">
-                          {!list.is_public && <Badge variant="outline">Private</Badge>}
-                          <Badge variant="secondary">{list.follower_count.toLocaleString()} followers</Badge>
-                        </div>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground">
-                        {list.bucket_items?.length || 0} items • {list.category}
-                      </p>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))
-            )}
-          </TabsContent>
 
           <TabsContent value="activity" className="space-y-4">
             {timeline.length === 0 ? (
@@ -399,8 +399,50 @@ export default function ProfilePage({ params }: ProfilePageProps) {
               ))
             )}
           </TabsContent>
+
+          <TabsContent value="created" className="space-y-4">
+            {createdLists.length === 0 ? (
+              <div className="text-center py-12 bg-muted/20 rounded-xl border-2 border-dashed">
+                <p className="text-muted-foreground">No lists created yet.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+                {createdLists.map((list) => (
+                  <ListCard
+                    key={list.id}
+                    list={list as any}
+                    isOwner={isOwnProfile && !list.origin_id}
+                    onEdit={isOwnProfile && !list.origin_id ? () => {
+                      setSelectedList(list as any);
+                      setIsEditDialogOpen(true);
+                    } : undefined}
+                    onDelete={isOwnProfile && !list.origin_id ? () => {
+                      setSelectedList(list as any);
+                      setIsDeleteDialogOpen(true);
+                    } : undefined}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
         </Tabs>
+
+        {/* Management Dialogs */}
+        <EditListDialog
+          isOpen={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          onListUpdated={fetchProfileData}
+          list={selectedList}
+        />
+        <DeleteListDialog
+          isOpen={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          onListDeleted={fetchProfileData}
+          listId={selectedList?.id || null}
+          listName={selectedList?.name || null}
+        />
       </div>
-    </div>
+    </div >
   )
 }

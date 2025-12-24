@@ -192,6 +192,7 @@ export default function ExplorePage() {
               <ListCard
                 key={list.id}
                 list={list}
+                showProgress={false}
               />
             ))}
           </div>

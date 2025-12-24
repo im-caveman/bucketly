@@ -70,6 +70,7 @@ export default function SettingsPage() {
       setLinkedinUrl(profile.linkedin_url || "")
       setGithubUrl(profile.github_url || "")
       setWebsiteUrl(profile.website_url || "")
+      setPrivacy(prev => ({ ...prev, profilePublic: !profile.is_private }))
       setLoading(false)
     }
   }, [profile])
@@ -136,6 +137,7 @@ export default function SettingsPage() {
         linkedin_url: linkedinUrl || null,
         github_url: githubUrl || null,
         website_url: websiteUrl || null,
+        is_private: !privacy.profilePublic,
       })
 
       toast.success("Profile updated successfully", {

@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { X, Upload } from "lucide-react"
 import { updateMemory, uploadMemoryPhoto, deleteMemoryPhoto } from "@/lib/bucket-list-service"
@@ -16,7 +15,6 @@ interface Memory {
   bucket_item_id: string
   reflection: string
   photos: string[]
-  is_public: boolean
   created_at: string
   updated_at: string
 }
@@ -29,17 +27,16 @@ interface EditMemoryDialogProps {
   userId: string
 }
 
-export function EditMemoryDialog({ 
-  isOpen, 
-  onClose, 
-  onMemoryUpdated, 
+export function EditMemoryDialog({
+  isOpen,
+  onClose,
+  onMemoryUpdated,
   memory,
-  userId 
+  userId
 }: EditMemoryDialogProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [reflection, setReflection] = useState(memory.reflection)
-  const [isPublic, setIsPublic] = useState(memory.is_public)
   const [existingPhotos, setExistingPhotos] = useState<string[]>(memory.photos || [])
   const [newFiles, setNewFiles] = useState<File[]>([])
   const [newPreviewUrls, setNewPreviewUrls] = useState<string[]>([])
@@ -50,7 +47,6 @@ export function EditMemoryDialog({
   useEffect(() => {
     // Reset form when memory changes
     setReflection(memory.reflection)
-    setIsPublic(memory.is_public)
     setExistingPhotos(memory.photos || [])
     setNewFiles([])
     setNewPreviewUrls([])
@@ -77,7 +73,7 @@ export function EditMemoryDialog({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-    
+
     // Validate file types
     const validFiles = files.filter(file => {
       const isImage = file.type.startsWith('image/')
@@ -111,7 +107,7 @@ export function EditMemoryDialog({
   const removeNewPhoto = (index: number) => {
     setNewFiles(prev => prev.filter((_, i) => i !== index))
     setNewPreviewUrls(prev => prev.filter((_, i) => i !== index))
-    
+
     // Clear the specific error if it exists
     setErrors(prev => {
       const newErrors = { ...prev }
@@ -154,7 +150,7 @@ export function EditMemoryDialog({
       await updateMemory(memory.id, {
         reflection,
         photos: allPhotos,
-        is_public: isPublic,
+        is_public: false,
       })
 
       toast({
@@ -167,7 +163,7 @@ export function EditMemoryDialog({
       setNewPreviewUrls([])
       setPhotosToDelete([])
       setErrors({})
-      
+
       onMemoryUpdated()
       onClose()
     } catch (error: any) {
@@ -184,7 +180,6 @@ export function EditMemoryDialog({
   const handleClose = () => {
     if (!isSubmitting) {
       setReflection(memory.reflection)
-      setIsPublic(memory.is_public)
       setExistingPhotos(memory.photos || [])
       setNewFiles([])
       setNewPreviewUrls([])
@@ -200,7 +195,7 @@ export function EditMemoryDialog({
         <DialogHeader>
           <DialogTitle>Edit Memory</DialogTitle>
           <DialogDescription>
-            Update your reflection, photos, or privacy settings
+            Update your reflection or photos
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -263,7 +258,7 @@ export function EditMemoryDialog({
                     </div>
                   </div>
                 )}
-                
+
                 <Button
                   type="button"
                   variant="outline"
@@ -311,23 +306,6 @@ export function EditMemoryDialog({
               </div>
             </div>
 
-            {/* Privacy Toggle */}
-            <div className="flex items-center justify-between space-x-2 p-4 border border-border rounded-lg">
-              <div className="space-y-0.5">
-                <Label htmlFor="is-public" className="cursor-pointer">
-                  Make this memory public
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Public memories can be seen by others in your social feed
-                </p>
-              </div>
-              <Switch
-                id="is-public"
-                checked={isPublic}
-                onCheckedChange={setIsPublic}
-                disabled={isSubmitting}
-              />
-            </div>
           </div>
 
           <DialogFooter>

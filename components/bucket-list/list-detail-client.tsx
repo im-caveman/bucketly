@@ -10,9 +10,9 @@ import { ListCompletionModal } from "@/components/bucket-list/list-completion-mo
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { fetchBucketListById, toggleItemCompletion, createMemory, uploadMemoryPhoto, fetchUserMemoryForItem, deleteMemory, followBucketList, unfollowBucketList, type BucketListWithItems } from "@/lib/bucket-list-service"
+import { fetchBucketListById, toggleItemCompletion, createMemory, uploadMemoryPhoto, fetchUserMemoryForItem, deleteMemory, cloneBucketList, followBucketList, unfollowBucketList, fetchUserBucketLists, type BucketListWithItems } from "@/lib/bucket-list-service"
 import { useAuth } from "@/contexts/auth-context"
-import { Loader2 } from "lucide-react"
+import { Loader2, ShieldCheck, Bookmark, Lock, Info, Plus, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { SocialShare } from "@/components/common/social-share"
 import {
@@ -25,6 +25,12 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 import { UploadMemoryDialog } from "@/components/bucket-list/upload-memory-dialog"
 import { AddItemDialog } from "@/components/bucket-list/add-item-dialog"
@@ -36,7 +42,7 @@ export function ListDetailClient() {
     const params = useParams()
     const router = useRouter()
     const { user } = useAuth()
-    const [list, setList] = useState<BucketListWithItems & { isFollowing: boolean } | null>(null)
+    const [list, setList] = useState<BucketListWithItems | null>(null)
     const [items, setItems] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -54,7 +60,6 @@ export function ListDetailClient() {
         isOpen: false,
         itemId: null
     })
-    const [isFollowing, setIsFollowing] = useState(false)
     const [followLoading, setFollowLoading] = useState(false)
 
     // Management dialogs state
@@ -73,7 +78,6 @@ export function ListDetailClient() {
             const data = await fetchBucketListById(params.id as string, user?.id)
             setList(data)
             setItems(data.bucket_items || [])
-            setIsFollowing(data.isFollowing || false)
         } catch (err) {
             console.error("Error loading list:", err)
             setError("Failed to load list details")
@@ -94,35 +98,38 @@ export function ListDetailClient() {
     })
 
     const handleFollowToggle = async () => {
-        if (!user || !list) {
-            toast.error("Please log in to follow lists")
-            return
-        }
+        if (!user || !list) return
 
         setFollowLoading(true)
-        const wasFollowing = isFollowing
 
         try {
-            // Optimistic update
-            setIsFollowing(!wasFollowing)
-            setList(prev => prev ? { ...prev, follower_count: prev.follower_count + (wasFollowing ? -1 : 1) } : prev)
-
-            if (wasFollowing) {
+            if (list.isFollowing) {
+                // Handle Unfollow
                 await unfollowBucketList(user.id, list.id)
+                // Don't decrement follower count as it represents all-time copies
+                setList(prev => prev ? { ...prev, isFollowing: false } : null)
                 toast.success("Unfollowed list")
             } else {
+                // Handle Follow
                 await followBucketList(user.id, list.id)
-                toast.success("Following list! 🎉")
-            }
+                setList(prev => prev ? { ...prev, isFollowing: true, follower_count: (prev.follower_count || 0) + 1 } : null)
+                toast.success("List added to your collection! 🎉")
 
-            // Trigger update for dashboard
-            window.dispatchEvent(new CustomEvent('bucketly:list-follow-update'))
+                // Find and redirect to the shadow copy
+                // We delay slightly to allow propagation though not strictly necessary if pure db
+                const lists = await fetchUserBucketLists(user.id)
+                const shadowCopy = lists.find(l => l.origin_id === list.id)
+
+                if (shadowCopy) {
+                    router.push(`/list/${shadowCopy.id}`)
+                } else {
+                    // Fallback if we can't find it immediately (e.g. latency)
+                    toast.info("Check 'My Lists' to see your new copy")
+                }
+            }
         } catch (error) {
-            // Revert optimistic update
-            setIsFollowing(wasFollowing)
-            setList(prev => prev ? { ...prev, follower_count: prev.follower_count + (wasFollowing ? 1 : -1) } : prev)
             console.error("Failed to toggle follow:", error)
-            toast.error(wasFollowing ? "Failed to unfollow" : "Failed to follow")
+            toast.error("Failed to update follow status")
         } finally {
             setFollowLoading(false)
         }
@@ -176,7 +183,7 @@ export function ListDetailClient() {
                 // Find the user's memory to delete
                 const userMemory = await fetchUserMemoryForItem(item.id, user.id)
                 if (userMemory) {
-                    await deleteMemory(userMemory.id, user.id)
+                    await deleteMemory((userMemory as any).id, user.id)
                 }
             } catch (err) {
                 console.error("Error deleting memory during uncheck:", err)
@@ -318,104 +325,165 @@ export function ListDetailClient() {
     }
 
     const totalListPoints = items.reduce((acc, item) => acc + (item.points || 0), 0)
+    const isShadowClone = !!list.origin_id
 
     return (
-        <div className="min-h-screen bg-background">
-            <div className="max-w-7xl mx-auto px-4 py-8">
-                {/* Header */}
-                <div className="flex items-start justify-between gap-4 mb-8">
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                            <Link href="/">
-                                <Button variant="ghost" size="sm" className="gap-2 -ml-2">
-                                    ← Back
-                                </Button>
-                            </Link>
-                        </div>
-                        <div className="flex items-center gap-3 mb-3">
-                            <span className="text-4xl">{categoryIcons[list.category] || "✨"}</span>
-                            <h1 className="font-display text-4xl font-bold">{list.name}</h1>
-                        </div>
-                        {list.description && (
-                            <p className="text-lg text-muted-foreground mb-3">{list.description}</p>
-                        )}
-                        <div className="flex items-center gap-2">
-                            <Badge variant="secondary">{list.follower_count.toLocaleString()} followers</Badge>
-                            <Badge variant="outline">Created by {list.profiles?.username || "Unknown"}</Badge>
-                            {!list.is_public && <Badge variant="outline" className="bg-muted">Private</Badge>}
-                        </div>
+        <div className="container mx-auto max-w-5xl py-8 px-4 space-y-8 animate-in fade-in duration-500">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-8 pb-6 border-b border-border/50">
+                <div className="space-y-4 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 px-2 py-0">
+                            {list.category}
+                        </Badge>
+                        {isShadowClone ? (
+                            <Badge variant="secondary" className="bg-blue-500/10 text-blue-500 border-blue-500/20 px-2 py-0.5 font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0">
+                                <Bookmark className="h-3 w-3" />
+                                Followed List
+                            </Badge>
+                        ) : isOwner ? (
+                            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20 px-2 py-0.5 font-bold uppercase tracking-wider flex items-center gap-1.5 shrink-0">
+                                <ShieldCheck className="h-3 w-3" />
+                                Created List
+                            </Badge>
+                        ) : null}
                     </div>
-                    <div className="flex flex-col gap-2 shrink-0">
-                        <div className="flex gap-2 justify-end">
-                            <SocialShare
-                                url={typeof window !== 'undefined' ? window.location.href : ''}
-                                title={`Check out this bucket list: ${list.name}`}
-                                description={list.description || undefined}
-                            />
-                            <Button
-                                size="lg"
-                                className="gap-2"
-                                onClick={handleFollowToggle}
-                                disabled={followLoading}
-                                variant={isFollowing ? "outline" : "default"}
-                            >
-                                {followLoading ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <span>{isFollowing ? "💔" : "❤️"}</span>
-                                )}
-                                {isFollowing ? "Unfollow" : "Follow"}
-                            </Button>
-                        </div>
 
-                        {isOwner && (
-                            <div className="flex gap-2 justify-end">
-                                <Button variant="outline" onClick={() => setIsEditListOpen(true)}>
-                                    Edit List
+                    <div className="flex items-start gap-4">
+                        <span className="text-3xl md:text-4xl mt-1 shrink-0">{categoryIcons[list.category] || "✨"}</span>
+                        <h1 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text leading-tight break-words">
+                            {list.name}
+                        </h1>
+                    </div>
+
+                    <p className="text-muted-foreground text-lg max-w-2xl leading-relaxed line-clamp-3 md:line-clamp-none">
+                        {list.description}
+                    </p>
+
+                    <div className="flex items-center gap-3 flex-wrap pt-1">
+                        <Badge variant="secondary" className="bg-muted/50 whitespace-nowrap text-[10px] uppercase tracking-wider font-semibold">
+                            {list.follower_count.toLocaleString()} followers
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">
+                            By {list.profiles?.username || "Unknown"}
+                        </Badge>
+                        {!list.is_public && (
+                            <Badge variant="outline" className="bg-muted/30 text-[10px] uppercase tracking-wider font-semibold whitespace-nowrap">
+                                Private
+                            </Badge>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3 shrink-0 pt-2 md:pt-1 md:justify-end">
+                    {/* Action Buttons - ONLY for non-clones */}
+                    {isOwner && !isShadowClone && (
+                        <div className="flex items-center gap-2">
+                            <Button onClick={() => setIsAddItemOpen(true)} className="rounded-full shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all hover:-translate-y-0.5 px-6">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add Item
+                            </Button>
+                            <div className="flex items-center gap-1.5 pl-1.5 border-l border-border/50">
+                                <Button variant="outline" size="icon" onClick={() => setIsEditListOpen(true)} className="rounded-full h-9 w-9 border-primary/20 hover:border-primary hover:bg-primary/5">
+                                    <Pencil className="h-4 w-4" />
+                                    <span className="sr-only">Edit List</span>
                                 </Button>
-                                <Button variant="outline" onClick={() => setIsAddItemOpen(true)}>
-                                    + Add Item
-                                </Button>
-                                <Button variant="destructive" size="icon" onClick={() => setIsDeleteListOpen(true)}>
-                                    🗑️
+                                <Button variant="outline" size="icon" onClick={() => setIsDeleteListOpen(true)} className="rounded-full h-9 w-9 border-destructive/20 hover:border-destructive hover:bg-destructive/5 text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="sr-only">Delete List</span>
                                 </Button>
                             </div>
-                        )}
+                        </div>
+                    )}
+
+                    {isShadowClone && (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/5 rounded-full text-[11px] text-blue-500 border border-blue-500/10 shadow-sm animate-in slide-in-from-right-2 duration-300">
+                            <Lock className="h-3 w-3" />
+                            <span className="font-bold uppercase tracking-wider">Read-only copy</span>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Info className="h-3.5 w-3.5 cursor-help ml-0.5 opacity-70 hover:opacity-100 transition-opacity" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" className="max-w-xs">
+                                        <p>This is a tracked copy of a public list. You can update your own progress, but the list structure and details cannot be changed.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
+                    )}
+
+                    {!isOwner && (
+                        <Button
+                            size="lg"
+                            className="rounded-full gap-2 transition-all active:scale-95 shadow-md px-6"
+                            onClick={handleFollowToggle}
+                            disabled={followLoading}
+                            variant={list.isFollowing ? "secondary" : "default"}
+                        >
+                            {followLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <span>{list.isFollowing ? "✓" : "➕"}</span>
+                            )}
+                            {list.isFollowing ? "Following" : "Follow List"}
+                        </Button>
+                    )}
+
+                    <div className="pl-1.5 border-l border-border/50 ml-1.5">
+                        <SocialShare
+                            url={typeof window !== 'undefined' ? window.location.href : ''}
+                            title={`Check out this bucket list: ${list.name}`}
+                            description={list.description || undefined}
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Progress Section */}
+            <div className="pt-2">
+                <ListProgress items={items} />
+            </div>
+
+            {/* Content Section */}
+            <div className="space-y-6">
+                <div className="flex items-center justify-between gap-4">
+                    <FilterTabs filter={filter} onChange={setFilter} />
+                    <div className="hidden md:block text-sm text-muted-foreground font-medium">
+                        Total potential: <span className="text-primary">{totalListPoints} points</span>
                     </div>
                 </div>
 
-                {/* Progress Section */}
-                <div className="mb-8">
-                    <ListProgress items={items} />
-                </div>
-
-                {/* Filter Tabs */}
-                <div className="mb-6">
-                    <FilterTabs filter={filter} onChange={setFilter} />
-                </div>
-
-                {/* Items List */}
-                <div className="space-y-3">
+                <div className="grid gap-4">
                     {filteredItems.length === 0 ? (
-                        <div className="text-center py-12">
-                            <p className="text-lg text-muted-foreground">
-                                {filter === "completed" ? "No completed items yet" : "No items to do!"}
+                        <div className="text-center py-20 border-2 border-dashed border-border/50 rounded-3xl bg-muted/20">
+                            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span className="text-2xl">✨</span>
+                            </div>
+                            <h3 className="text-lg font-semibold mb-1">No items found</h3>
+                            <p className="text-muted-foreground">
+                                {filter === "completed" ? "Start checking off your goals!" : "You've finished everything here!"}
                             </p>
                         </div>
                     ) : (
-                        filteredItems.map((item) => (
-                            <ItemCard
-                                key={item.id}
-                                item={item}
-                                onToggle={() => handleToggleItem(item.id)}
-                                onUploadMemory={() => {
-                                    setUploadMemoryModal({ isOpen: true, item })
-                                }}
-                            />
-                        ))
+                        <div className="grid gap-3">
+                            {filteredItems.map((item) => (
+                                <ItemCard
+                                    key={item.id}
+                                    item={item}
+                                    onToggle={isOwner ? () => handleToggleItem(item.id) : undefined}
+                                    readonly={!isOwner}
+                                    onUploadMemory={isOwner ? () => {
+                                        setUploadMemoryModal({ isOpen: true, item })
+                                    } : undefined}
+                                />
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>
+
+            {/* Modals & Dialogs */}
             {completionModal.item && (
                 <CompletionModal
                     isOpen={completionModal.isOpen}
@@ -448,7 +516,7 @@ export function ListDetailClient() {
                 />
             )}
 
-            {isOwner && (
+            {isOwner && !isShadowClone && (
                 <>
                     <AddItemDialog
                         isOpen={isAddItemOpen}
@@ -475,7 +543,7 @@ export function ListDetailClient() {
                         isOpen={isDeleteListOpen}
                         onClose={() => setIsDeleteListOpen(false)}
                         onListDeleted={() => {
-                            router.push(`/profile/${user.username}`)
+                            router.push(`/profile/${user?.user_metadata?.username || ''}`)
                         }}
                         listId={list.id}
                         listName={list.name}

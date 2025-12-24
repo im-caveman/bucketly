@@ -180,7 +180,7 @@ export function DashboardSidebar({ className, ...props }: React.ComponentProps<t
                     <UserHoverCard user={userProfile || { username: user?.email?.split('@')[0] || 'User', avatar_url: user?.user_metadata?.avatar_url }}>
                       <div className="shrink-0 flex size-14 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground overflow-clip">
                         <Avatar className="h-full w-full rounded-lg">
-                          <AvatarImage src={userProfile?.avatar_url || ''} alt={userProfile?.username} className="object-cover rounded-lg" />
+                          <AvatarImage src={userProfile?.avatar_url || null} alt={userProfile?.username} className="object-cover rounded-lg" />
                           <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-lg rounded-lg">
                             {userProfile?.username?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
                           </AvatarFallback>

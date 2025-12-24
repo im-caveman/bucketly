@@ -15,8 +15,9 @@ import { Label } from "@/components/ui/label"
 interface ItemCardProps {
   item: BucketListItem
   onToggle?: (completed: boolean) => void
-  onUploadMemory: () => void
+  onUploadMemory?: () => void
   onCompletionChange?: () => void
+  readonly?: boolean
 }
 
 const difficultyColors = {
@@ -25,7 +26,7 @@ const difficultyColors = {
   hard: "bg-destructive/10 text-destructive",
 }
 
-export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange }: ItemCardProps) {
+export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange, readonly }: ItemCardProps) {
   const { toast } = useToast()
   const [isUpdating, setIsUpdating] = useState(false)
   const [currentValue, setCurrentValue] = useState(item.currentValue || 0)
@@ -101,7 +102,7 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange }:
             checked={item.completed}
             onCheckedChange={handleToggle}
             className="mt-1"
-            disabled={isUpdating}
+            disabled={isUpdating || readonly}
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-2">
@@ -159,6 +160,7 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange }:
                   value={currentValue}
                   onChange={(e) => handleProgressChange(parseInt(e.target.value) || 0)}
                   className="h-8 w-24 text-xs"
+                  disabled={readonly}
                 />
                 <span className="text-xs text-muted-foreground">{item.unitType}</span>
               </div>
@@ -166,7 +168,7 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange }:
           </div>
         )}
 
-        {item.completed && (
+        {item.completed && onUploadMemory && (
           <Button onClick={onUploadMemory} variant="outline" size="sm" className="mt-3 w-full gap-2 bg-transparent">
             <span>📸</span>
             Upload Memory

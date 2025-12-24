@@ -29,7 +29,7 @@ export default function Notifications({
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <Card className="h-full">
+    <Card className="w-full">
       <CardHeader className="flex items-center justify-between pl-3 pr-1">
         <CardTitle className="flex items-center gap-2.5 text-sm font-medium uppercase">
           {unreadCount > 0 ? <Badge>{unreadCount}</Badge> : <Bullet />}
@@ -48,7 +48,7 @@ export default function Notifications({
       </CardHeader>
 
       <CardContent className="bg-accent p-1.5 overflow-hidden">
-        <ScrollArea className="max-h-[300px] w-full">
+        <ScrollArea className="w-full h-auto [&>[data-slot=scroll-area-viewport]]:max-h-[300px] [&>[data-slot=scroll-area-viewport]]:h-auto">
           <div className="space-y-2 p-1">
             <AnimatePresence initial={false} mode="popLayout">
               {notifications.map((notification) => (

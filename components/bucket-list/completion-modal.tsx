@@ -27,7 +27,7 @@ export function CompletionModal({ isOpen, itemTitle, itemPoints, onClose, onSave
   const [photos, setPhotos] = useState<string[]>([])
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [reflection, setReflection] = useState("")
-  const [isPublic, setIsPublic] = useState(false)
+  const [isPublic, setIsPublic] = useState(true)
 
   const [isAnimating, setIsAnimating] = useState(false)
   const [showShare, setShowShare] = useState(false)
@@ -81,7 +81,6 @@ export function CompletionModal({ isOpen, itemTitle, itemPoints, onClose, onSave
     setPhotos([])
     setSelectedFiles([])
     setReflection("")
-    setIsPublic(false)
     onClose()
   }
 
@@ -208,13 +207,18 @@ export function CompletionModal({ isOpen, itemTitle, itemPoints, onClose, onSave
             </div>
 
             {/* Privacy Toggle */}
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <div>
-                <p className="font-semibold">Share Publicly</p>
-                <p className="text-sm text-muted-foreground">Others can see and celebrate your achievement</p>
+            <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg border">
+              <div className="flex flex-col gap-0.5">
+                <Label htmlFor="privacy-mode" className="font-medium">Public Memory</Label>
+                <p className="text-xs text-muted-foreground">Allow others to see this memory on your profile</p>
               </div>
-              <Switch checked={isPublic} onCheckedChange={setIsPublic} />
+              <Switch
+                id="privacy-mode"
+                checked={isPublic}
+                onCheckedChange={setIsPublic}
+              />
             </div>
+
 
             {/* Points Display */}
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">

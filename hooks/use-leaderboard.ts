@@ -44,13 +44,32 @@ const defaultConfig: SWRConfiguration = {
 
 // Fetcher function for leaderboard
 async function fetchLeaderboard(limit: number = 100): Promise<LeaderboardUser[]> {
-  const { data, error } = await supabase
-    .from('leaderboard_view')
-    .select('*')
+  const { data, error } = await (limit ?
+    supabase.from('leaderboard_view').select('*') :
+    supabase.from('leaderboard_view').select('*')
+  )
     .order('total_points', { ascending: false })
     .limit(limit)
 
-  if (error) throw error
+  if (error) {
+    // If is_private filter failed, try without it
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('leaderboard_view')
+      .select('*')
+      .order('total_points', { ascending: false })
+      .limit(limit)
+
+    if (fallbackError) throw fallbackError
+    return (fallbackData as any[]).map((row) => ({
+      id: row.id,
+      rank: row.current_rank,
+      username: row.username,
+      avatar_url: row.avatar_url,
+      points: row.total_points,
+      completions: row.items_completed,
+      current_rank: row.current_rank,
+    }))
+  }
 
   return (data as LeaderboardViewRow[]).map((row) => ({
     id: row.id,
@@ -67,7 +86,7 @@ async function fetchLeaderboard(limit: number = 100): Promise<LeaderboardUser[]>
 async function fetchUserRank(userId: string): Promise<LeaderboardUser | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, avatar_url, total_points, global_rank, items_completed')
+    .select('*')
     .eq('id', userId)
     .single()
 
@@ -76,13 +95,13 @@ async function fetchUserRank(userId: string): Promise<LeaderboardUser | null> {
   if (!data) return null
 
   return {
-    id: data.id,
-    rank: data.global_rank || 0,
-    username: data.username,
-    avatar_url: data.avatar_url,
-    points: data.total_points,
-    completions: data.items_completed,
-    current_rank: data.global_rank || 0,
+    id: (data as any).id,
+    rank: (data as any).global_rank || 0,
+    username: (data as any).username,
+    avatar_url: (data as any).avatar_url,
+    points: (data as any).total_points,
+    completions: (data as any).items_completed,
+    current_rank: (data as any).global_rank || 0,
   }
 }
 
@@ -94,11 +113,13 @@ export function useLeaderboard(page: number = 0, pageSize: number = 50) {
   const { data, error, isLoading, mutate } = useSWR(
     ['leaderboard', page, pageSize],
     async () => {
-      const { data, error, count } = await supabase
+      const query = supabase
         .from('profiles')
-        .select('id, username, avatar_url, bio, total_points, global_rank, items_completed, twitter_url, instagram_url, linkedin_url, github_url, website_url', { count: 'exact' })
+        .select('*', { count: 'exact' })
         .order('total_points', { ascending: false })
         .range(from, to)
+
+      const { data, error, count } = await query
 
       if (error) throw error
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,15 +18,30 @@ interface DeleteListDialogProps {
   isOpen: boolean
   onClose: () => void
   onListDeleted: () => void
-  listId: string
-  listName: string
+  listId: string | null
+  listName: string | null
 }
 
 export function DeleteListDialog({ isOpen, onClose, onListDeleted, listId, listName }: DeleteListDialogProps) {
   const { toast } = useToast()
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // Safety check to ensure body is unlocked when dialog closes or unmounts
+  useEffect(() => {
+    const cleanup = () => {
+      document.body.style.pointerEvents = ""
+    }
+
+    if (!isOpen) {
+      const timer = setTimeout(cleanup, 500)
+      return () => clearTimeout(timer)
+    }
+
+    return cleanup
+  }, [isOpen])
+
   const handleDelete = async () => {
+    if (!listId) return
     setIsDeleting(true)
 
     try {
@@ -39,8 +54,11 @@ export function DeleteListDialog({ isOpen, onClose, onListDeleted, listId, listN
         description: "Your bucket list has been deleted successfully.",
       })
 
-      onListDeleted()
       onClose()
+      // Wait a moment for the dialog to close before refreshing data
+      setTimeout(() => {
+        onListDeleted()
+      }, 100)
     } catch (error: any) {
       const apiError = handleSupabaseError(error)
       toast({
@@ -58,7 +76,7 @@ export function DeleteListDialog({ isOpen, onClose, onListDeleted, listId, listN
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Bucket List?</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete <span className="font-semibold text-foreground">&quot;{listName}&quot;</span>?
+            Are you sure you want to delete <span className="font-semibold text-foreground">&quot;{listName || 'this list'}&quot;</span>?
             This action cannot be undone. All items, progress, and memories associated with this list will be permanently removed.
           </AlertDialogDescription>
         </AlertDialogHeader>

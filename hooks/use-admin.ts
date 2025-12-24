@@ -1,15 +1,13 @@
 import { useMemo } from 'react'
 import { useAuth } from '@/contexts/auth-context'
 
-// Admin email - can be expanded to an array for multiple admins
-const ADMIN_EMAILS = ['tsunyoxi@gmail.com']
+import { isAdminEmail } from '@/lib/admin-config'
 
 export function useAdmin() {
     const { user, loading } = useAuth()
 
     const isAdmin = useMemo(() => {
-        if (!user?.email) return false
-        return ADMIN_EMAILS.includes(user.email.toLowerCase())
+        return isAdminEmail(user?.email)
     }, [user?.email])
 
     return {

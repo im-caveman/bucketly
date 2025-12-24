@@ -19,13 +19,64 @@ import type {
   GlobalItem,
 } from '@/types/supabase'
 import { checkAndAwardBadges } from './badge-progress-service'
-import type { BucketListWithItems, UserProfile } from '@/types/bucket-list'
+import type { BucketListWithItems, UserProfile as BucketUserProfile } from '@/types/bucket-list'
 
-export type { BucketListWithItems, UserProfile }
+/**
+ * Audit log interface
+ */
+export interface AuditLogInsert {
+  user_id: string
+  action: string
+  target_id?: string
+  target_type?: string
+  status: 'allowed' | 'denied' | 'error'
+  metadata?: any
+}
 
-export async function fetchUserBucketLists(userId: string) {
+/**
+ * Log an action to the audit_logs table
+ */
+export async function logAuditAction(log: AuditLogInsert) {
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
+      .from('audit_logs')
+      .insert({
+        user_id: log.user_id,
+        action: log.action,
+        target_id: log.target_id,
+        target_type: log.target_type,
+        status: log.status,
+        metadata: log.metadata,
+      })
+
+    if (error) {
+      console.error('Failed to log audit action:', error)
+    }
+  } catch (err) {
+    console.error('Error in logAuditAction:', err)
+  }
+}
+
+/**
+ * Check if a list is a shadow clone (has an origin_id)
+ */
+export async function isShadowClone(listId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('bucket_lists')
+    .select('origin_id')
+    .eq('id', listId)
+    .single()
+
+  if (error) return false
+  return !!data.origin_id
+}
+
+export type { BucketListWithItems }
+
+export async function fetchUserBucketLists(userId: string, onlyOwned: boolean = false) {
+  try {
+    // First, get all lists owned by the user
+    let query = supabase
       .from('bucket_lists')
       .select(`
         id,
@@ -37,6 +88,7 @@ export async function fetchUserBucketLists(userId: string) {
         follower_count,
         created_at,
         updated_at,
+        origin_id,
         bucket_items (
           id,
           bucket_list_id,
@@ -49,9 +101,16 @@ export async function fetchUserBucketLists(userId: string) {
           completed_date,
           created_at,
           updated_at
-        )
+        ),
+        profiles (username, avatar_url)
       `)
       .eq('user_id', userId)
+
+    if (onlyOwned) {
+      query = query.is('origin_id', null)
+    }
+
+    const { data: allLists, error } = await query
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -59,7 +118,30 @@ export async function fetchUserBucketLists(userId: string) {
       throw handleSupabaseError(error)
     }
 
-    return data as BucketListWithItems[]
+    if (onlyOwned) {
+      // Robustly filter in memory as well to ensure no shadow copies slip through
+      // regardless of DB state or query quirks
+      return (allLists || []).filter(l => !l.origin_id) as BucketListWithItems[]
+    }
+
+    // Get all lists the user is following to filter shadow copies
+    const { data: following } = await supabase
+      .from('list_followers')
+      .select('bucket_list_id')
+      .eq('user_id', userId)
+
+    const followedListIds = new Set(following?.map(f => f.bucket_list_id) || [])
+
+    // Filter out shadow copies where user is not following the origin
+    const filteredLists = (allLists || []).filter(list => {
+      // If it's not a shadow copy (no origin_id), always show it
+      if (!list.origin_id) return true
+
+      // If it's a shadow copy, only show if user is following the origin
+      return followedListIds.has(list.origin_id)
+    })
+
+    return filteredLists as BucketListWithItems[]
   } catch (error) {
     logError(error, { context: 'fetchUserBucketLists', userId })
     throw handleSupabaseError(error)
@@ -88,6 +170,7 @@ export async function fetchPublicBucketLists(
         follower_count,
         created_at,
         updated_at,
+        origin_id,
         bucket_items (
           id,
           bucket_list_id,
@@ -101,7 +184,7 @@ export async function fetchPublicBucketLists(
           created_at,
           updated_at
         ),
-        profiles (username, avatar_url)
+        profiles!inner (username, avatar_url)
       `, { count: 'exact' })
       .eq('is_public', true)
       .order('created_at', { ascending: false })
@@ -160,6 +243,7 @@ export async function fetchBucketListById(listId: string, userId?: string) {
       follower_count,
       created_at,
       updated_at,
+      origin_id,
       bucket_items (
         id,
         bucket_list_id,
@@ -211,6 +295,7 @@ export async function searchBucketLists(searchQuery: string, category?: Category
       follower_count,
       created_at,
       updated_at,
+      origin_id,
       bucket_items (
         id,
         bucket_list_id,
@@ -224,7 +309,7 @@ export async function searchBucketLists(searchQuery: string, category?: Category
         created_at,
         updated_at
       ),
-      profiles (username, avatar_url)
+      profiles!inner (username, avatar_url)
     `)
     .eq('is_public', true)
     .or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
@@ -270,10 +355,26 @@ export async function updateBucketList(listId: string, updates: UpdateBucketList
       updated_at: new Date().toISOString(),
     })
     .eq('id', listId)
+    .is('origin_id', null) // Security: Prevent updating shadow clones
     .select()
     .single()
 
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    await logAuditAction({
+      user_id: user.id,
+      action: 'update_bucket_list',
+      target_id: listId,
+      target_type: 'bucket_list',
+      status: error ? (error.code === 'PGRST116' ? 'denied' : 'error') : 'allowed',
+      metadata: { updates, error_code: error?.code }
+    })
+  }
+
   if (error) {
+    if (error.code === 'PGRST116') {
+      throw new Error('Cannot modify a followed list')
+    }
     throw error
   }
 
@@ -297,6 +398,10 @@ export interface CreateBucketListParams {
   }>
 }
 
+import { isAdminEmail } from '@/lib/admin-config'
+
+// ... existing imports
+
 export async function createBucketList({
   userId,
   name,
@@ -305,6 +410,15 @@ export async function createBucketList({
   isPublic,
   items,
 }: CreateBucketListParams) {
+  // Security check: Only admins can create public lists
+  let finalIsPublic = false
+  if (isPublic) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user && user.id === userId && isAdminEmail(user.email)) {
+      finalIsPublic = true
+    }
+  }
+
   // 1. Create the bucket list
   const { data: bucketList, error: listError } = await supabase
     .from('bucket_lists')
@@ -313,7 +427,7 @@ export async function createBucketList({
       name: name.trim(),
       description: description?.trim() || null,
       category,
-      is_public: isPublic,
+      is_public: finalIsPublic,
     })
     .select()
     .single()
@@ -356,7 +470,7 @@ export async function createBucketList({
       category,
       items_count: items.length,
     },
-    is_public: isPublic,
+    is_public: finalIsPublic,
   })
 
   // 4. Update stats and award badges
@@ -371,10 +485,105 @@ export async function deleteBucketList(listId: string) {
     .from('bucket_lists')
     .delete()
     .eq('id', listId)
+    .is('origin_id', null) // Security: Prevent deleting shadow clones
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    await logAuditAction({
+      user_id: user.id,
+      action: 'delete_bucket_list',
+      target_id: listId,
+      target_type: 'bucket_list',
+      status: error ? 'error' : 'allowed',
+      metadata: { error_code: error?.code }
+    })
+  }
 
   if (error) {
     throw error
   }
+  if (error) {
+    throw error
+  }
+}
+
+export async function cloneBucketList(userId: string, sourceListId: string) {
+  // 1. Fetch the source list and its items
+  const { data: sourceList, error: fetchError } = await supabase
+    .from('bucket_lists')
+    .select(`
+      *,
+      bucket_items (*)
+    `)
+    .eq('id', sourceListId)
+    .single()
+
+  if (fetchError || !sourceList) {
+    throw new Error('Failed to fetch source list')
+  }
+
+  // 2. Create the new list for the current user
+  const { data: newList, error: createError } = await supabase
+    .from('bucket_lists')
+    .insert({
+      user_id: userId,
+      name: sourceList.name, // Keep same name
+      description: sourceList.description,
+      category: sourceList.category,
+      is_public: false, // Clone lists are always private by default
+      origin_id: sourceListId, // Link to original list for shadow copy tracking
+    })
+    .select()
+    .single()
+
+  if (createError) {
+    throw handleSupabaseError(createError)
+  }
+
+  // 3. Copy items
+  if (sourceList.bucket_items && sourceList.bucket_items.length > 0) {
+    const itemsToInsert = sourceList.bucket_items.map((item: any) => ({
+      bucket_list_id: newList.id,
+      title: item.title,
+      description: item.description,
+      points: item.points,
+      difficulty: item.difficulty,
+      location: item.location,
+      target_value: item.target_value,
+      unit_type: item.unit_type,
+      current_value: 0, // Reset progress
+      completed: false, // Reset completion
+      completed_date: null
+    }))
+
+    const { error: itemsError } = await supabase
+      .from('bucket_items')
+      .insert(itemsToInsert)
+
+    if (itemsError) {
+      // Cleanup list if items fail?
+      throw handleSupabaseError(itemsError)
+    }
+  }
+
+  // 4. Create timeline event
+  await supabase.from('timeline_events').insert({
+    user_id: userId,
+    event_type: 'list_created',
+    title: `Added list: ${newList.name}`,
+    description: `Started tracking "${newList.name}"`,
+    metadata: {
+      list_id: newList.id,
+      original_list_id: sourceListId,
+      category: newList.category,
+    },
+    is_public: false,
+  })
+
+  // 5. Update stats
+  await updateProfileStats(userId)
+
+  return newList
 }
 
 export async function fetchGlobalItems(
@@ -418,6 +627,24 @@ export async function fetchGlobalItems(
 export type AddBucketItemData = Omit<BucketItemInsert, 'id' | 'bucket_list_id' | 'completed' | 'completed_date' | 'created_at' | 'updated_at'>
 
 export async function addBucketItem(listId: string, itemData: AddBucketItemData) {
+  // Check if target list is a shadow copy
+  const isShadow = await isShadowClone(listId)
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (isShadow) {
+    if (user) {
+      await logAuditAction({
+        user_id: user.id,
+        action: 'add_bucket_item',
+        target_id: listId,
+        target_type: 'bucket_list',
+        status: 'denied',
+        metadata: { itemData }
+      })
+    }
+    throw new Error('Cannot add items to a followed list')
+  }
+
   const { data, error } = await supabase
     .from('bucket_items')
     .insert({
@@ -495,7 +722,7 @@ export async function toggleItemCompletion(itemId: string, completed: boolean) {
     if (!existingEvents || existingEvents.length === 0) {
       await supabase.from('timeline_events').insert({
         user_id: userId,
-        event_type: 'item_completed',
+        event_type: 'item_completed_personal', // Changed from item_completed to avoid triggering notifications to followers
         title: `Completed: ${item.title}`,
         description: item.description,
         metadata: {
@@ -503,7 +730,7 @@ export async function toggleItemCompletion(itemId: string, completed: boolean) {
           points: item.points,
           category: item.bucket_lists?.category
         },
-        is_public: true
+        is_public: false
       })
     }
   } else {
@@ -588,6 +815,34 @@ export async function recalculateGlobalRanks() {
 export type UpdateBucketItemData = Omit<BucketItemUpdate, 'id' | 'bucket_list_id' | 'completed' | 'completed_date' | 'created_at' | 'updated_at'>
 
 export async function updateBucketItem(itemId: string, updates: UpdateBucketItemData) {
+  // Security Check: If it's a shadow clone, only allow updating current_value
+  const { data: itemData, error: fetchError } = await supabase
+    .from('bucket_items')
+    .select('bucket_lists(origin_id)')
+    .eq('id', itemId)
+    .single()
+
+  const isShadow = !!(itemData as any)?.bucket_lists?.origin_id
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (isShadow) {
+    // Only current_value is allowed for shadow clones
+    const keys = Object.keys(updates)
+    if (keys.length > 1 || (keys.length === 1 && keys[0] !== 'current_value')) {
+      if (user) {
+        await logAuditAction({
+          user_id: user.id,
+          action: 'update_bucket_item',
+          target_id: itemId,
+          target_type: 'bucket_item',
+          status: 'denied',
+          metadata: { updates }
+        })
+      }
+      throw new Error('Followed list items cannot be edited')
+    }
+  }
+
   const { data, error } = await supabase
     .from('bucket_items')
     .update({
@@ -598,6 +853,17 @@ export async function updateBucketItem(itemId: string, updates: UpdateBucketItem
     .select()
     .single()
 
+  if (user) {
+    await logAuditAction({
+      user_id: user.id,
+      action: 'update_bucket_item',
+      target_id: itemId,
+      target_type: 'bucket_item',
+      status: error ? 'error' : 'allowed',
+      metadata: { updates, is_shadow: isShadow }
+    })
+  }
+
   if (error) {
     throw error
   }
@@ -606,10 +872,42 @@ export async function updateBucketItem(itemId: string, updates: UpdateBucketItem
 }
 
 export async function deleteBucketItem(itemId: string) {
+  // Check if it's a shadow clone
+  const { data: itemData } = await supabase
+    .from('bucket_items')
+    .select('bucket_lists(origin_id)')
+    .eq('id', itemId)
+    .single()
+
+  if ((itemData as any)?.bucket_lists?.origin_id) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await logAuditAction({
+        user_id: user.id,
+        action: 'delete_bucket_item',
+        target_id: itemId,
+        target_type: 'bucket_item',
+        status: 'denied'
+      })
+    }
+    throw new Error('Followed list items cannot be deleted')
+  }
+
   const { error } = await supabase
     .from('bucket_items')
     .delete()
     .eq('id', itemId)
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    await logAuditAction({
+      user_id: user.id,
+      action: 'delete_bucket_item',
+      target_id: itemId,
+      target_type: 'bucket_item',
+      status: error ? 'error' : 'allowed'
+    })
+  }
 
   if (error) {
     throw error
@@ -703,7 +1001,7 @@ export async function createMemory(userId: string, memoryData: CreateMemoryData)
         photos: memoryData.photos,
         is_update: actionType === 'updated'
       },
-      is_public: true
+      is_public: memoryData.is_public
     })
   }
 
@@ -890,6 +1188,21 @@ export async function deleteMemoryPhoto(photoUrl: string) {
 // Social Features - List Following Functions
 
 export async function followBucketList(userId: string, listId: string) {
+  // Check if user already has a shadow copy of this list
+  const { data: existingShadowCopy } = await supabase
+    .from('bucket_lists')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('origin_id', listId)
+    .maybeSingle()
+
+  // If shadow copy exists, just add follow relationship
+  // If not, create shadow copy via clone
+  if (!existingShadowCopy) {
+    await cloneBucketList(userId, listId)
+  }
+
+  // Add follow relationship
   const { data, error } = await supabase
     .from('list_followers')
     .insert({
@@ -899,10 +1212,22 @@ export async function followBucketList(userId: string, listId: string) {
     .select()
     .single()
 
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    await logAuditAction({
+      user_id: user.id,
+      action: 'follow_bucket_list',
+      target_id: listId,
+      target_type: 'bucket_list',
+      status: error ? 'error' : 'allowed',
+      metadata: { error_code: error?.code }
+    })
+  }
+
   if (error) {
     // Check if already following
     if (error.code === '23505') {
-      throw new Error('You are already following this list')
+      return { already_following: true }
     }
     throw error
   }
@@ -923,6 +1248,17 @@ export async function unfollowBucketList(userId: string, listId: string) {
 
   if (error) {
     throw error
+  }
+
+  const { data: { user: currentUser } } = await supabase.auth.getUser()
+  if (currentUser) {
+    await logAuditAction({
+      user_id: currentUser.id,
+      action: 'unfollow_bucket_list',
+      target_id: listId,
+      target_type: 'bucket_list',
+      status: 'allowed'
+    })
   }
 }
 
@@ -1074,7 +1410,7 @@ export async function fetchTrendingBucketLists(userId?: string, limit: number = 
         created_at,
         updated_at
       ),
-      profiles (username, avatar_url)
+      profiles!inner (username, avatar_url)
     `)
     .eq('is_public', true)
     .gte('created_at', thirtyDaysAgo.toISOString())
@@ -1186,19 +1522,7 @@ export type UserProfile = Profile
 export async function fetchUserProfile(userId: string): Promise<UserProfile> {
   const { data, error } = await supabase
     .from('profiles')
-    .select(`
-      id,
-      username,
-      avatar_url,
-      bio,
-      total_points,
-      global_rank,
-      items_completed,
-      lists_following,
-      lists_created,
-      created_at,
-      updated_at
-    `)
+    .select('*')
     .eq('id', userId)
     .single()
 
@@ -1209,7 +1533,7 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile> {
   return data as UserProfile
 }
 
-export type UpdateProfileData = Pick<ProfileUpdate, 'username' | 'avatar_url' | 'bio' | 'twitter_url' | 'instagram_url' | 'linkedin_url' | 'github_url' | 'website_url'>
+export type UpdateProfileData = Pick<ProfileUpdate, 'username' | 'avatar_url' | 'bio' | 'twitter_url' | 'instagram_url' | 'linkedin_url' | 'github_url' | 'website_url' | 'is_private'>
 
 export async function updateUserProfile(userId: string, updates: Partial<UpdateProfileData>): Promise<UserProfile> {
   // Validate username if provided
@@ -1240,17 +1564,32 @@ export async function updateUserProfile(userId: string, updates: Partial<UpdateP
     throw new Error('Bio must be 500 characters or less')
   }
 
+  const updatePayload: any = {
+    ...updates,
+    updated_at: new Date().toISOString(),
+  }
+
   const { data, error } = await supabase
     .from('profiles')
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq('id', userId)
     .select()
     .single()
 
   if (error) {
+    // If update failed potentially due to is_private column missing
+    if (error.code === '42703' && 'is_private' in updates) {
+      delete updatePayload.is_private
+      const { data: retryData, error: retryError } = await supabase
+        .from('profiles')
+        .update(updatePayload)
+        .eq('id', userId)
+        .select()
+        .single()
+
+      if (retryError) throw retryError
+      return retryData as UserProfile
+    }
     throw error
   }
 
