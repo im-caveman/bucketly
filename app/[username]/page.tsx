@@ -346,19 +346,28 @@ export default function ProfilePage({ params }: ProfilePageProps) {
               </div>
             ) : (
               bucketLists.map((list) => (
-                <Card key={list.id}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>{list.name}</span>
-                      <Badge variant="secondary">{list.follower_count.toLocaleString()} followers</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {list.bucket_items?.length || 0} items • {list.category}
-                    </p>
-                  </CardContent>
-                </Card>
+                <Link key={list.id} href={`/list/${list.id}`} className="block transition-all hover:scale-[1.01]">
+                  <Card className="hover:border-primary/50 cursor-pointer">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span>{list.name}</span>
+                          {!list.is_public && (
+                            <Badge variant="outline" className="text-xs bg-muted">
+                              🔒 Private
+                            </Badge>
+                          )}
+                        </div>
+                        <Badge variant="secondary">{list.follower_count.toLocaleString()} followers</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        {list.bucket_items?.length || 0} items • {list.category}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))
             )}
           </TabsContent>
