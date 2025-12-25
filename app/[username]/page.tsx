@@ -346,19 +346,24 @@ export default function ProfilePage({ params }: ProfilePageProps) {
               </div>
             ) : (
               bucketLists.map((list) => (
-                <Card key={list.id}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>{list.name}</span>
-                      <Badge variant="secondary">{list.follower_count.toLocaleString()} followers</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {list.bucket_items?.length || 0} items • {list.category}
-                    </p>
-                  </CardContent>
-                </Card>
+                <Link key={list.id} href={`/list/${list.id}`} className="block">
+                  <Card className="transition-all hover:border-primary hover:shadow-md">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>{list.name}</span>
+                        <div className="flex gap-2">
+                          {!list.is_public && <Badge variant="outline">Private</Badge>}
+                          <Badge variant="secondary">{list.follower_count.toLocaleString()} followers</Badge>
+                        </div>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        {list.bucket_items?.length || 0} items • {list.category}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))
             )}
           </TabsContent>
