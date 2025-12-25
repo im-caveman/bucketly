@@ -197,7 +197,7 @@ export function logError(error: any, context?: Record<string, any>): void {
         stack: error.stack,
         // @ts-ignore
         cause: error.cause
-      } : typeof error === 'object' ? JSON.stringify(error, null, 2) : error,
+      } : typeof error === 'object' ? JSON.parse(JSON.stringify(error, Object.getOwnPropertyNames(error))) : error,
       context,
       timestamp: new Date().toISOString()
     })
