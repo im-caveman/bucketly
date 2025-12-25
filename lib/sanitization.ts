@@ -282,3 +282,11 @@ export function sanitizeReflection(reflection: string): string {
   
   return sanitized
 }
+
+/**
+ * Safely stringifies data for JSON-LD scripts to prevent XSS
+ * Escapes characters that could be used to break out of the script tag
+ */
+export function safeJsonLdStringify(data: any): string {
+  return JSON.stringify(data).replace(/</g, '\\u003c')
+}

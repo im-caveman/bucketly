@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import { getPostBySlug, getRelatedPosts, incrementViewCount } from '@/lib/blog-service'
+import { safeJsonLdStringify } from '@/lib/sanitization'
 import { BlogContent } from '@/components/blog/BlogContent'
 import { CategoryBadge } from '@/components/blog/CategoryBadge'
 import { RelatedPosts } from '@/components/blog/RelatedPosts'
@@ -82,7 +83,7 @@ export default async function BlogPostPage(props: BlogPostPageProps) {
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{
-                    __html: JSON.stringify({
+                    __html: safeJsonLdStringify({
                         '@context': 'https://schema.org',
                         '@type': 'BlogPosting',
                         headline: post.title,
