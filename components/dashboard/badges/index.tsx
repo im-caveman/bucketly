@@ -7,59 +7,33 @@ import { Bullet } from "@/components/ui/bullet"
 import { Progress } from "@/components/ui/progress"
 import { AnimatePresence, motion } from "framer-motion"
 import { useAuth } from "@/contexts/auth-context"
-import { useBadges, useUserBadges } from "@/hooks/use-badges"
+import { useUserBadges } from "@/hooks/use-badges"
+import { useBadgeProgress } from "@/hooks/use-badge-progress"
 import { Loader2, Lock } from "lucide-react"
-import type { Badge as BadgeType } from "@/lib/bucket-list-service"
+import { BadgeCelebration } from "./celebration"
 
 export default function BadgePreview() {
     const { user } = useAuth()
-    const { badges, isLoading: badgesLoading } = useBadges()
-    const { userBadges, isLoading: userBadgesLoading } = useUserBadges(user?.id)
+    const {
+        progressMap,
+        earnedBadges,
+        lockedBadges,
+        isLoading,
+        badges,
+        celebrationQueue,
+        dismissCelebration
+    } = useBadgeProgress(user?.id)
 
-    const isLoading = badgesLoading || userBadgesLoading
+    const [selectedBadge, setSelectedBadge] = React.useState<any>(null)
 
-    // Create a map of badge IDs that the user has earned
-    const earnedBadgeIds = new Set(userBadges?.map((ub) => ub.badge_id) || [])
+    const { userBadges } = useUserBadges(user?.id)
 
-    // Separate earned and locked badges
-    const earnedBadges = badges?.filter((badge) => earnedBadgeIds.has(badge.id)) || []
-    const lockedBadges = badges?.filter((badge) => !earnedBadgeIds.has(badge.id)) || []
+    // Current badge being celebrated
+    const currentCelebration = celebrationQueue.length > 0 ? celebrationQueue[0] : null
 
     // Get user badge info for earned badges (to show awarded date)
     const getUserBadgeInfo = (badgeId: string) => {
         return userBadges?.find((ub) => ub.badge_id === badgeId)
-    }
-
-    // Calculate progress for a specific badge based on criteria
-    const calculateBadgeProgress = (badge: BadgeType) => {
-        if (!user || !badge.criteria) return { current: 0, target: 0, percentage: 0 }
-
-        const criteria = badge.criteria as any
-        const userProfile = user as any // Type assertion to access profile fields
-
-        // Example criteria structure: { type: "items_completed", target: 100 }
-        if (criteria.type === "items_completed") {
-            const current = userProfile.items_completed || 0
-            const target = criteria.target || 0
-            const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0
-            return { current, target, percentage }
-        }
-
-        if (criteria.type === "lists_created") {
-            const current = userProfile.lists_created || 0
-            const target = criteria.target || 0
-            const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0
-            return { current, target, percentage }
-        }
-
-        if (criteria.type === "total_points") {
-            const current = userProfile.total_points || 0
-            const target = criteria.target || 0
-            const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0
-            return { current, target, percentage }
-        }
-
-        return { current: 0, target: 0, percentage: 0 }
     }
 
     // Calculate overall stats
@@ -101,13 +75,15 @@ export default function BadgePreview() {
                                                 exit={{ opacity: 0, x: -20 }}
                                                 transition={{ duration: 0.3, ease: "easeOut" }}
                                                 key={badge.id}
+                                                onClick={() => setSelectedBadge(badge)}
+                                                className="cursor-pointer group"
                                             >
-                                                <div className="bg-background rounded-lg p-3 flex items-center gap-3 border-2 border-primary/20 mb-2">
+                                                <div className="bg-background rounded-lg p-3 flex items-center gap-3 border-2 border-primary/20 mb-2 hover:border-primary/40 transition-colors">
                                                     <div className="relative size-12 flex-shrink-0">
                                                         <img
                                                             src={badge.icon_url}
                                                             alt={badge.name}
-                                                            className="object-contain w-full h-full"
+                                                            className="object-contain w-full h-full scale-110 group-hover:scale-125 transition-transform"
                                                         />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -128,7 +104,7 @@ export default function BadgePreview() {
 
                                     {/* Locked Badges with Individual Progress */}
                                     {lockedBadges.map((badge) => {
-                                        const progress = calculateBadgeProgress(badge)
+                                        const progress = progressMap[badge.id]
                                         return (
                                             <motion.div
                                                 layout
@@ -144,7 +120,7 @@ export default function BadgePreview() {
                                                             <img
                                                                 src={badge.icon_url}
                                                                 alt={badge.name}
-                                                                className="object-contain w-full h-full grayscale opacity-50"
+                                                                className="object-contain w-full h-full grayscale opacity-50 scale-110"
                                                             />
                                                             <div className="absolute inset-0 flex items-center justify-center bg-background/30 rounded">
                                                                 <Lock className="h-5 w-5 text-muted-foreground" />
@@ -158,7 +134,7 @@ export default function BadgePreview() {
                                                         </div>
                                                     </div>
                                                     {/* Individual Progress Bar */}
-                                                    {progress.target > 0 && (
+                                                    {progress && progress.target > 0 && (
                                                         <div className="space-y-1">
                                                             <div className="flex items-center justify-between text-xs">
                                                                 <span className="text-muted-foreground">Progress</span>
@@ -187,6 +163,15 @@ export default function BadgePreview() {
                     </div>
                 </div>
             </CardContent>
+
+            {/* Celebration Modal */}
+            <BadgeCelebration
+                badge={currentCelebration || selectedBadge}
+                onClose={() => {
+                    if (currentCelebration) dismissCelebration(currentCelebration.id)
+                    setSelectedBadge(null)
+                }}
+            />
         </Card>
     )
 }

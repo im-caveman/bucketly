@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { UserProfile } from '@/types/bucket-list'
+import type { Badge } from './bucket-list-service'
 
 export interface BadgeProgress {
     badgeId: string
@@ -11,6 +12,66 @@ export interface BadgeProgress {
 
 export interface BadgeProgressMap {
     [badgeId: string]: BadgeProgress
+}
+
+/**
+ * Calculate progress for a single badge based on its criteria and user profile
+ */
+export function calculateSingleBadgeProgress(
+    badge: Badge,
+    profile: UserProfile,
+    isEarned: boolean = false
+): BadgeProgress {
+    const criteria = badge.criteria as any
+
+    if (!criteria || !criteria.type) {
+        return {
+            badgeId: badge.id,
+            current: 0,
+            target: 0,
+            percentage: 0,
+            isEarned,
+        }
+    }
+
+    let current = 0
+    let target = criteria.target || criteria.threshold || 0
+
+    // Calculate current progress based on criteria type
+    switch (criteria.type) {
+        case 'items_completed':
+            current = profile.items_completed || 0
+            break
+        case 'lists_created':
+            current = profile.lists_created || 0
+            break
+        case 'lists_following':
+            current = profile.lists_following || 0
+            break
+        case 'total_points':
+            current = profile.total_points || 0
+            break
+        case 'global_rank':
+            // For rank, lower is better, so we calculate differently
+            const currentRank = profile.global_rank || 999999
+            target = criteria.target || 1
+            // If they are ranked better (lower number) or equal to target
+            current = currentRank <= target ? target : 0
+            break
+        default:
+            current = 0
+            target = 0
+    }
+
+    const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0
+
+    return {
+        badgeId: badge.id,
+        current,
+        target,
+        percentage,
+        isEarned,
+    }
 }
 
 /**
@@ -39,9 +100,9 @@ export async function calculateBadgeProgress(
     }
 
     // Fetch all badges (this will be cached by SWR in the hook)
-    const { data: badges, error: badgesError } = await supabase
+    const { data: badges, error: badgesError } = await (supabase
         .from('badges')
-        .select('id, criteria')
+        .select('*') as any)
 
     if (badgesError || !badges) {
         console.error('Error fetching badges:', badgesError)
@@ -49,68 +110,22 @@ export async function calculateBadgeProgress(
     }
 
     // Fetch user's earned badges (this will be cached by SWR in the hook)
-    const { data: userBadges } = await supabase
+    const { data: userBadges } = await (supabase
         .from('user_badges')
         .select('badge_id')
-        .eq('user_id', userId)
+        .eq('user_id', userId) as any)
 
-    const earnedBadgeIds = new Set(userBadges?.map(ub => ub.badge_id) || [])
+    const earnedBadgeIds = new Set((userBadges as any[])?.map(ub => ub.badge_id) || [])
 
     // Calculate progress for each badge
     const progressMap: BadgeProgressMap = {}
 
-    for (const badge of badges) {
-        const isEarned = earnedBadgeIds.has(badge.id)
-        const criteria = badge.criteria as any
-
-        if (!criteria || !criteria.type) {
-            progressMap[badge.id] = {
-                badgeId: badge.id,
-                current: 0,
-                target: 0,
-                percentage: 0,
-                isEarned,
-            }
-            continue
-        }
-
-        let current = 0
-        let target = criteria.target || 0
-
-        // Calculate current progress based on criteria type
-        switch (criteria.type) {
-            case 'items_completed':
-                current = profile.items_completed || 0
-                break
-            case 'lists_created':
-                current = profile.lists_created || 0
-                break
-            case 'lists_following':
-                current = profile.lists_following || 0
-                break
-            case 'total_points':
-                current = profile.total_points || 0
-                break
-            case 'global_rank':
-                // For rank, lower is better, so we calculate differently
-                const currentRank = profile.global_rank || 999999
-                target = criteria.target || 1
-                current = currentRank <= target ? target : 0
-                break
-            default:
-                current = 0
-                target = 0
-        }
-
-        const percentage = target > 0 ? Math.min((current / target) * 100, 100) : 0
-
-        progressMap[badge.id] = {
-            badgeId: badge.id,
-            current,
-            target,
-            percentage,
-            isEarned,
-        }
+    for (const badge of (badges as Badge[])) {
+        progressMap[badge.id] = calculateSingleBadgeProgress(
+            badge,
+            profile,
+            earnedBadgeIds.has(badge.id)
+        )
     }
 
     return progressMap

@@ -9,6 +9,7 @@ import React, { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2, Twitter, Instagram, Linkedin, Github, Globe, UserPlus, UserMinus } from "lucide-react"
+import { motion } from "framer-motion"
 import { fetchUserProfile, fetchUserBucketLists, fetchUserTimeline } from "@/lib/bucket-list-service"
 import type { UserProfile, BucketListWithItems } from "@/lib/bucket-list-service"
 import { ListCard } from "@/components/bucket-list/list-card"
@@ -19,6 +20,8 @@ import { useUserBadges } from "@/hooks/use-badges"
 import Link from "next/link"
 import { FollowersDialog } from "@/components/profile/followers-dialog"
 import { UserHoverCard } from "@/components/profile/user-hover-card"
+import { BadgeCelebration } from "@/components/dashboard/badges/celebration"
+import type { Badge as BadgeType } from "@/lib/bucket-list-service"
 
 interface ProfilePageProps {
   params: Promise<{
@@ -39,6 +42,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedList, setSelectedList] = useState<BucketListWithItems | null>(null)
+  const [selectedBadge, setSelectedBadge] = useState<BadgeType | null>(null)
 
   // Determine if viewing own profile and setup follow hook
   const isOwnProfile = currentUser?.id === profile?.id
@@ -308,13 +312,14 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                     {userBadges.map((userBadge) => (
                       <div
                         key={userBadge.id}
-                        className="p-4 rounded-lg border-2 border-transparent hover:border-primary/20 hover:bg-primary/10 transition-all text-center"
+                        onClick={() => setSelectedBadge(userBadge.badges as BadgeType)}
+                        className="p-4 rounded-lg border-2 border-transparent hover:border-primary/20 hover:bg-primary/5 transition-all text-center cursor-pointer group"
                       >
                         <div className="relative size-12 mx-auto mb-2">
                           <img
                             src={userBadge.badges.icon_url}
                             alt={userBadge.badges.name}
-                            className="object-contain w-full h-full"
+                            className="object-contain w-full h-full scale-150 group-hover:scale-[1.65] transition-transform"
                           />
                         </div>
                         <p className="font-semibold text-sm mb-1">{userBadge.badges.name}</p>
@@ -441,6 +446,12 @@ export default function ProfilePage({ params }: ProfilePageProps) {
           onListDeleted={fetchProfileData}
           listId={selectedList?.id || null}
           listName={selectedList?.name || null}
+        />
+
+        {/* Badge Sharing Dialog */}
+        <BadgeCelebration
+          badge={selectedBadge}
+          onClose={() => setSelectedBadge(null)}
         />
       </div>
     </div >
