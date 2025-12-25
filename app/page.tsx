@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Navigation } from "@/components/landing/navigation"
 import { HeroSection } from "@/components/landing/hero-section"
 import { Footer } from "@/components/landing/footer"
+import { safeJsonLdStringify } from '@/lib/sanitization'
 
 // Lazy load below-the-fold components for better performance
 const FeatureGrid = dynamic(() => import("@/components/landing/feature-grid").then(mod => ({ default: mod.FeatureGrid })), {
@@ -89,7 +90,7 @@ export default function LandingPage() {
       {/* JSON-LD Structured Data */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLdStringify(structuredData) }}
       />
 
       <div className="min-h-screen bg-background">

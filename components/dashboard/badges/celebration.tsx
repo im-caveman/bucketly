@@ -115,7 +115,7 @@ export function BadgeCelebration({ badge, onClose }: BadgeCelebrationProps) {
                             You earned the <span className="text-primary">{badge.name}</span> badge
                         </DialogDescription>
                         <p className="text-sm text-muted-foreground italic">
-                            "{badge.description}"
+                            &quot;{badge.description}&quot;
                         </p>
                     </motion.div>
 
