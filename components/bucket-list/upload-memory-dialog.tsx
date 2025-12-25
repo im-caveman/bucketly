@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 import { X, Upload } from "lucide-react"
 import { createMemory, uploadMemoryPhoto } from "@/lib/bucket-list-service"
@@ -21,6 +22,7 @@ interface UploadMemoryDialogProps {
   initialData?: {
     reflection: string
     photos: string[]
+    is_public?: boolean
   }
 }
 
@@ -38,6 +40,7 @@ export function UploadMemoryDialog({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>(initialData?.photos || [])
+  const [isPublic, setIsPublic] = useState(initialData?.is_public ?? true)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -123,7 +126,7 @@ export function UploadMemoryDialog({
         bucket_item_id: itemId,
         reflection,
         photos: photoUrls,
-        is_public: false,
+        is_public: isPublic,
       })
 
       toast({
@@ -246,18 +249,30 @@ export function UploadMemoryDialog({
                   {reflection.length} / 5000 characters
                 </p>
               </div>
+              {/* Privacy Toggle */}
+              <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg border">
+                <div className="flex flex-col gap-0.5">
+                  <Label htmlFor="privacy-mode" className="font-medium">Public Memory</Label>
+                  <p className="text-xs text-muted-foreground">Allow others to see this memory on your profile</p>
+                </div>
+                <Switch
+                  id="privacy-mode"
+                  checked={isPublic}
+                  onCheckedChange={setIsPublic}
+                  disabled={isSubmitting}
+                />
+              </div>
             </div>
 
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Uploading..." : "Upload Memory"}
+              </Button>
+            </DialogFooter>
           </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Uploading..." : "Upload Memory"}
-            </Button>
-          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

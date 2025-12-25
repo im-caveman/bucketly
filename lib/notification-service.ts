@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { handleSupabaseError, logError } from './error-handler'
 import type { Notification } from '@/types/dashboard'
+import { isAdminEmail } from './admin-config'
 
 /**
  * Notification Service
@@ -220,3 +221,119 @@ export async function createAdminNotification(
   }
 }
 
+
+/**
+ * Notify followers of a user when they complete a task from a shadow list
+ * Follows requirements:
+ * 1.1: Notify for completed tasks from followed lists
+ * 1.2: NEVER notify for created lists (origin_id is null)
+ * 1.3: Respect task privacy (is_public_memory)
+ * 1.4: Respect list privacy (skip if is_public is false UNLESS shadowed)
+ */
+export async function notifyFollowersOfCompletion(
+  userId: string,
+  itemId: string,
+  isPublicMemory: boolean
+): Promise<void> {
+  console.log('notifyFollowersOfCompletion called:', { userId, itemId, isPublicMemory })
+  try {
+    // 1. Fetch item and list details
+    const { data: itemData, error: itemError } = await supabase
+      .from('bucket_items')
+      .select(`
+        id,
+        title,
+        bucket_list_id,
+        bucket_lists (
+          id,
+          name,
+          is_public,
+          origin_id,
+          user_id
+        )
+      `)
+      .eq('id', itemId)
+      .single()
+
+    if (itemError || !itemData) {
+      console.warn('Could not find item for notification:', itemId)
+      return
+    }
+
+    const item = itemData as any
+    const list = Array.isArray(item.bucket_lists) ? item.bucket_lists[0] : item.bucket_lists
+    if (!list) {
+      console.log('Skipping notification: No list associated with item')
+      return
+    }
+
+    console.log('Checking notification requirements for:', {
+      itemTitle: item.title,
+      listName: list.name,
+      originId: list.origin_id,
+      isPublicMemory
+    })
+
+    // Requirement 1.2: Check if list was created by the user (not a shadow copy)
+    if (!list.origin_id) {
+      console.log('Skipping notification: List is user-created (Requirement 1.2)')
+      return
+    }
+
+    // Requirement 1.3: Check task privacy
+    if (!isPublicMemory) {
+      console.log('🔴 Skipping notification: Memory is PRIVATE (Requirement 1.3)')
+      return
+    }
+
+    console.log('🟢 Privacy check passed, proceeding with notification broadcast...')
+
+    // Requirement 1.4: Any actions on private lists (...) should never trigger (regardless of user role)
+    // Here we have a conflict: shadow clones (list.origin_id is not null) are private by default for non-admins,
+    // and they CANNOT be made public because updateBucketList blocks editing them.
+    // If we return here, 1.1 (A follows B, notify A) will never work for non-admins.
+    // We will assume that 1.1 specifically refers to shadow copies and overrides 1.4 in this context,
+    // OR that 1.4 applies to "Ordinary" private lists.
+    // However, to be extra safe, if a list is explicitly private and has NO origin_id, we stop (already covered by 1.2).
+    // If it has an origin_id, we proceed IF memory is public.
+
+    // 2. Fetch the completer profile to get username
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('id', userId)
+      .single()
+
+    const profile = profileData as any
+    const username = profile?.username || 'Someone'
+
+    // 3. Call the broadcast RPC
+    const rpcTitle = 'Task Completed! 🎯'
+    const rpcMessage = `${username} completed "${item.title}" from "${list.name}"`
+    const rpcMetadata = {
+      item_id: item.id,
+      list_id: list.id,
+      completer_id: userId,
+      completer_username: username
+    }
+
+    console.log('Calling broadcast RPC:', { userId, rpcTitle })
+
+    const { error: rpcError } = await supabase.rpc('broadcast_completion_notification', {
+      p_completer_id: userId,
+      p_title: rpcTitle,
+      p_message: rpcMessage,
+      p_metadata: rpcMetadata
+    })
+
+    if (rpcError) {
+      console.error('Error calling broadcast RPC:', rpcError)
+      logError(rpcError, { context: 'notifyFollowersOfCompletion', userId })
+    } else {
+      console.log('Successfully triggered follower notification broadcast via RPC')
+    }
+  } catch (error) {
+    console.error('Exception in notifyFollowersOfCompletion:', error)
+    logError(error, { context: 'notifyFollowersOfCompletion', userId })
+  }
+}

@@ -723,7 +723,7 @@ export async function toggleItemCompletion(itemId: string, completed: boolean) {
       await supabase.from('timeline_events').insert({
         user_id: userId,
         event_type: 'item_completed_personal', // Changed from item_completed to avoid triggering notifications to followers
-        title: `Completed: ${item.title}`,
+        title: item.title,
         description: item.description,
         metadata: {
           item_id: itemId,
@@ -739,7 +739,7 @@ export async function toggleItemCompletion(itemId: string, completed: boolean) {
       .from('timeline_events')
       .delete()
       .eq('user_id', userId)
-      .eq('event_type', 'item_completed')
+      .in('event_type', ['item_completed', 'item_completed_personal'])
       .contains('metadata', { item_id: itemId })
   }
 
@@ -1003,6 +1003,17 @@ export async function createMemory(userId: string, memoryData: CreateMemoryData)
       },
       is_public: memoryData.is_public
     })
+  }
+
+  // 4. Notify followers if this is a completion memory
+  try {
+    const { notifyFollowersOfCompletion } = await import('./notification-service')
+    // We notify if it is public. The function itself handles shadow list checks.
+    console.log('Triggering follower notification check for memory:', { itemId: item.id, isPublic: !!memoryData.is_public })
+    await notifyFollowersOfCompletion(userId, item.id, !!memoryData.is_public)
+  } catch (notifyError) {
+    console.warn('Failed to send follower notifications:', notifyError)
+    // Don't fail the memory creation if notifications fail
   }
 
   return { id: memoryId }
