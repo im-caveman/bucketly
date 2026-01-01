@@ -100,6 +100,10 @@ export interface BucketItem {
   completedDate?: string | null
   created_at: string
   updated_at: string
+  location: string | null
+  target_value: number | null
+  unit_type: string | null
+  current_value: number | null
 }
 
 export interface Memory {

@@ -8,17 +8,21 @@ interface CategoryFilterProps {
   onChange: (category: Category | "all") => void
 }
 
-const categories = [
-  { id: "all", label: "All", icon: "⭐" },
-  { id: "adventures", label: "Adventures", icon: "🎯" },
-  { id: "places", label: "Places", icon: "🌍" },
-  { id: "cuisines", label: "Cuisines", icon: "🍽️" },
-  { id: "books", label: "Books", icon: "📚" },
-  { id: "songs", label: "Songs", icon: "🎵" },
-  { id: "monuments", label: "Monuments", icon: "🏛️" },
-  { id: "acts-of-service", label: "Acts of Service", icon: "🤝" },
-  { id: "miscellaneous", label: "Miscellaneous", icon: "✨" },
-] as const
+  const categories = [
+    { id: "all", label: "All", icon: "⭐" },
+    { id: "places", label: "Places", icon: "🌍" },
+    { id: "adventures", label: "Adventures", icon: "🎯" },
+    { id: "cuisines", label: "Cuisines", icon: "🍽️" },
+    { id: "books", label: "Books", icon: "📚" },
+    { id: "songs", label: "Songs", icon: "🎵" },
+    { id: "monuments", label: "Monuments", icon: "🏛️" },
+    { id: "acts-of-service", label: "Acts of Service", icon: "🤝" },
+    { id: "experiences", label: "Experiences", icon: "✨" },
+    { id: "goals", label: "Goals", icon: "🎯" },
+    { id: "travel", label: "Travel", icon: "✈️" },
+    { id: "hobbies", label: "Hobbies", icon: "🎨" },
+    { id: "other", label: "Miscellaneous", icon: "✨" },
+  ] as const
 
 export function CategoryFilter({ selected, onChange }: CategoryFilterProps) {
   return (
