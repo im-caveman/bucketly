@@ -187,7 +187,7 @@ export default function AccountPage() {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <p className="text-3xl font-display font-bold text-primary">{(profile.total_points ?? 0).toLocaleString()}</p>
+                    <p className="text-3xl font-display font-bold text-primary">{profile.total_points !== null && profile.total_points !== undefined ? profile.total_points.toLocaleString() : '0'}</p>
                     <p className="text-sm text-muted-foreground mt-1">Total Points</p>
                   </div>
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
