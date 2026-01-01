@@ -27,8 +27,8 @@ export function UserStats({ user }: UserStatsProps) {
           <div className="relative">
             {isAvatarUrl ? (
               <div className="w-16 h-16 rounded-full overflow-hidden relative">
-                <Image 
-                  src={user.avatar} 
+                <Image
+                  src={user.avatar}
                   alt={user.username}
                   fill
                   className="object-cover"

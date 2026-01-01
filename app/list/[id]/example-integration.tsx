@@ -34,7 +34,7 @@ export default function ListDetailPageExample() {
   const [listData, setListData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<"all" | "completed" | "incomplete">("all")
-  
+
   // Dialog states
   const [addItemDialog, setAddItemDialog] = useState(false)
   const [editItemDialog, setEditItemDialog] = useState<{ isOpen: boolean; item: BucketListItem | null }>({

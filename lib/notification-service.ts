@@ -197,8 +197,6 @@ export async function createAdminNotification(
   metadata: Record<string, any> = {}
 ): Promise<void> {
   try {
-    console.log('Creating admin notification with params:', { title, message, type, priority, metadata })
-
     const { error } = await supabase.rpc('create_admin_notification', {
       p_title: title,
       p_message: message,
@@ -212,8 +210,6 @@ export async function createAdminNotification(
       logError(error, { context: 'createAdminNotification', title, params: { title, message, type, priority, metadata } })
       throw handleSupabaseError(error)
     }
-
-    console.log('Admin notification created successfully')
   } catch (error) {
     console.error('Exception in createAdminNotification:', error)
     logError(error, { context: 'createAdminNotification', title })
@@ -235,7 +231,6 @@ export async function notifyFollowersOfCompletion(
   itemId: string,
   isPublicMemory: boolean
 ): Promise<void> {
-  console.log('notifyFollowersOfCompletion called:', { userId, itemId, isPublicMemory })
   try {
     // 1. Fetch item and list details
     const { data: itemData, error: itemError } = await supabase
@@ -263,16 +258,8 @@ export async function notifyFollowersOfCompletion(
     const item = itemData as any
     const list = Array.isArray(item.bucket_lists) ? item.bucket_lists[0] : item.bucket_lists
     if (!list) {
-      console.log('Skipping notification: No list associated with item')
       return
     }
-
-    console.log('Checking notification requirements for:', {
-      itemTitle: item.title,
-      listName: list.name,
-      originId: list.origin_id,
-      isPublicMemory
-    })
 
     // Requirement 1.2: Check if list was created by the user (not a shadow copy)
     if (!list.origin_id) {
@@ -282,11 +269,8 @@ export async function notifyFollowersOfCompletion(
 
     // Requirement 1.3: Check task privacy
     if (!isPublicMemory) {
-      console.log('🔴 Skipping notification: Memory is PRIVATE (Requirement 1.3)')
       return
     }
-
-    console.log('🟢 Privacy check passed, proceeding with notification broadcast...')
 
     // Requirement 1.4: Any actions on private lists (...) should never trigger (regardless of user role)
     // Here we have a conflict: shadow clones (list.origin_id is not null) are private by default for non-admins,
@@ -317,8 +301,6 @@ export async function notifyFollowersOfCompletion(
       completer_username: username
     }
 
-    console.log('Calling broadcast RPC:', { userId, rpcTitle })
-
     const { error: rpcError } = await supabase.rpc('broadcast_completion_notification', {
       p_completer_id: userId,
       p_title: rpcTitle,
@@ -329,8 +311,6 @@ export async function notifyFollowersOfCompletion(
     if (rpcError) {
       console.error('Error calling broadcast RPC:', rpcError)
       logError(rpcError, { context: 'notifyFollowersOfCompletion', userId })
-    } else {
-      console.log('Successfully triggered follower notification broadcast via RPC')
     }
   } catch (error) {
     console.error('Exception in notifyFollowersOfCompletion:', error)

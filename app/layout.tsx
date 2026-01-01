@@ -11,6 +11,7 @@ import { AuthProvider } from "@/contexts/auth-context"
 import { SWRConfigProvider } from "@/contexts/swr-config-provider"
 import { LayoutContent } from "../components/layout-content"
 import { defaultDashboardData } from "@/lib/default-data"
+import { Analytics } from '@vercel/analytics/react'
 
 const mockData = defaultDashboardData
 
@@ -101,6 +102,7 @@ export default function RootLayout({
             </V0Provider>
           </SWRConfigProvider>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   )

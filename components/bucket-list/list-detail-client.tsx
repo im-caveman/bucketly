@@ -225,14 +225,6 @@ export function ListDetailClient() {
             return
         }
 
-        console.log("Starting memory save process...", {
-            itemId: completionModal.item.id,
-            userId: user.id,
-            photoCount: memory.photos.length,
-            reflectionLength: memory.reflection.length,
-            isPublic: memory.isPublic
-        })
-
         try {
             const toastId = toast.loading("Saving memory...")
 
@@ -240,16 +232,10 @@ export function ListDetailClient() {
             const photoUrls: string[] = []
             for (let i = 0; i < memory.photos.length; i++) {
                 const file = memory.photos[i]
-                console.log(`Uploading photo ${i + 1}/${memory.photos.length}:`, {
-                    name: file.name,
-                    size: file.size,
-                    type: file.type
-                })
 
                 try {
                     const url = await uploadMemoryPhoto(user.id, file)
                     photoUrls.push(url)
-                    console.log(`Photo ${i + 1} uploaded successfully:`, url)
                 } catch (uploadError) {
                     console.error(`Failed to upload photo ${i + 1}:`, uploadError)
                     console.error("Upload error details:", JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError), 2))
@@ -259,8 +245,6 @@ export function ListDetailClient() {
                 }
             }
 
-            console.log("All photos uploaded successfully. Creating memory record...")
-
             // Create memory record
             try {
                 await createMemory(user.id, {
@@ -269,7 +253,6 @@ export function ListDetailClient() {
                     photos: photoUrls,
                     is_public: memory.isPublic,
                 })
-                console.log("Memory record created successfully")
             } catch (createError) {
                 console.error("Failed to create memory record:", createError)
                 console.error("Create error details:", JSON.stringify(createError, Object.getOwnPropertyNames(createError), 2))
@@ -280,7 +263,6 @@ export function ListDetailClient() {
 
             toast.dismiss(toastId)
             toast.success("Memory saved successfully! 🎉")
-            console.log("Memory save completed successfully")
 
             // Dispatch event for widget update
             window.dispatchEvent(new CustomEvent('bucketly:item-update'))

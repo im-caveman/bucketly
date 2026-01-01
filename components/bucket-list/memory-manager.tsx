@@ -27,12 +27,12 @@ interface MemoryManagerProps {
   onMemoryChange?: () => void
 }
 
-export function MemoryManager({ 
-  itemId, 
-  itemTitle, 
-  userId, 
+export function MemoryManager({
+  itemId,
+  itemTitle,
+  userId,
   isItemCompleted,
-  onMemoryChange 
+  onMemoryChange
 }: MemoryManagerProps) {
   const { toast } = useToast()
   const [showUploadDialog, setShowUploadDialog] = useState(false)
@@ -85,7 +85,7 @@ export function MemoryManager({
     setIsDeleting(true)
     try {
       await deleteMemory(memoryToDelete)
-      
+
       toast({
         title: "Memory deleted",
         description: "The memory and all associated photos have been removed.",
@@ -148,14 +148,14 @@ export function MemoryManager({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Memory?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this memory and all associated photos from storage. 
+              This will permanently delete this memory and all associated photos from storage.
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete} 
+            <AlertDialogAction
+              onClick={confirmDelete}
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

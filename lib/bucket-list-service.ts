@@ -1009,7 +1009,6 @@ export async function createMemory(userId: string, memoryData: CreateMemoryData)
   try {
     const { notifyFollowersOfCompletion } = await import('./notification-service')
     // We notify if it is public. The function itself handles shadow list checks.
-    console.log('Triggering follower notification check for memory:', { itemId: item.id, isPublic: !!memoryData.is_public })
     await notifyFollowersOfCompletion(userId, item.id, !!memoryData.is_public)
   } catch (notifyError) {
     console.warn('Failed to send follower notifications:', notifyError)

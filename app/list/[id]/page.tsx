@@ -23,7 +23,6 @@ export async function generateMetadata(
 
   // 1. If Sharing a specific Item Completion
   if (itemId && typeof itemId === 'string') {
-    console.log('Generating metadata for item:', itemId)
     const { data: item } = await supabase
       .from('bucket_items')
       .select(`

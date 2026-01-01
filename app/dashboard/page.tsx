@@ -213,14 +213,8 @@ export default function DashboardPage() {
                     compact
                     showCreator={false}
                     isOwner={!list.origin_id}
-                    onEdit={!list.origin_id ? () => {
-                      // Handle edit for owned lists
-                      console.log('Edit list:', list.id)
-                    } : undefined}
-                    onDelete={!list.origin_id ? () => {
-                      // Handle delete for owned lists
-                      console.log('Delete list:', list.id)
-                    } : undefined}
+                    onEdit={!list.origin_id ? undefined : undefined}
+                    onDelete={!list.origin_id ? undefined : undefined}
                   />
                 ))}
               </div>
@@ -232,14 +226,8 @@ export default function DashboardPage() {
                     list={list}
                     showCreator={false}
                     isOwner={!list.origin_id}
-                    onEdit={!list.origin_id ? () => {
-                      // Handle edit for owned lists
-                      console.log('Edit list:', list.id)
-                    } : undefined}
-                    onDelete={!list.origin_id ? () => {
-                      // Handle delete for owned lists
-                      console.log('Delete list:', list.id)
-                    } : undefined}
+                    onEdit={!list.origin_id ? undefined : undefined}
+                    onDelete={!list.origin_id ? undefined : undefined}
                   />
                 ))}
               </div>

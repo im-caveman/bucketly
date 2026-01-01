@@ -13,8 +13,6 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  console.log('Middleware running for path:', request.nextUrl.pathname)
-
   // Create a Supabase client configured to use cookies
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -39,12 +37,6 @@ export async function middleware(request: NextRequest) {
 
   // Refresh session if expired - required for Server Components
   const { data: { session } } = await supabase.auth.getSession()
-
-  console.log('Middleware session check:', {
-    hasSession: !!session,
-    user: session?.user?.email,
-    path: request.nextUrl.pathname
-  })
 
   const isAuthenticated = !!session?.user
   const pathname = request.nextUrl.pathname
@@ -75,14 +67,12 @@ export async function middleware(request: NextRequest) {
   // Redirect authenticated users from landing page to dashboard
   if (isLandingPage && isAuthenticated) {
     const dashboardUrl = new URL('/dashboard', request.url)
-    console.log('Redirecting authenticated user to dashboard')
     return NextResponse.redirect(dashboardUrl)
   }
 
   // Redirect authenticated users from auth pages to dashboard
   if (isAuthRoute && isAuthenticated) {
     const dashboardUrl = new URL('/dashboard', request.url)
-    console.log('Redirecting authenticated user from auth page to dashboard')
     return NextResponse.redirect(dashboardUrl)
   }
 
@@ -91,7 +81,6 @@ export async function middleware(request: NextRequest) {
     const loginUrl = new URL('/auth/login', request.url)
     // Add redirect parameter to return user to intended page after login
     loginUrl.searchParams.set('redirect', pathname)
-    console.log('Redirecting unauthenticated user to login')
     return NextResponse.redirect(loginUrl)
   }
 

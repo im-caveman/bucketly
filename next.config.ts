@@ -1,16 +1,52 @@
 import type { NextConfig } from "next"
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
 
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
+
   // Performance optimizations
   compress: true,
   poweredByHeader: false,
   reactStrictMode: true,
 
-  // Optimize production builds
+  // Experimental features for better performance
+  experimental: {
+    optimizeCss: true,
+    optimizePackageImports: ['@supabase/supabase-js', 'lucide-react'],
+    serverActions: {
+      bodySizeLimit: '1mb', // Limit server action payload size
+    },
+  },
+
+  // Bundle analysis and optimization
+  webpack: (config, { isServer }) => {
+    // Optimize bundle size
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              chunks: 'all',
+            },
+            common: {
+              name: 'common',
+              minChunks: 2,
+              chunks: 'all',
+              enforce: true,
+            },
+          },
+        },
+      }
+    }
+    return config
+  },
 
   images: {
     // Enable Next.js automatic image optimization
@@ -19,6 +55,8 @@ const nextConfig: NextConfig = {
     deviceSizes: [320, 640, 750, 828, 1080, 1200, 1920, 2048],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 60,
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
       {
         protocol: 'https',
@@ -80,12 +118,14 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'", // Tailwind requires unsafe-inline
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.vercel.app",
               "frame-ancestors 'self'",
               "base-uri 'self'",
               "form-action 'self'",
               "object-src 'none'",
-              "upgrade-insecure-requests"
+              "upgrade-insecure-requests",
+              "report-uri /api/csp-report", // CSP violation reporting
+              "block-all-mixed-content" // Prevent mixed content
             ].join('; ')
           },
           // Strict Transport Security (HTTPS enforcement)
@@ -100,4 +140,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+export default withSentryConfig(nextConfig);
