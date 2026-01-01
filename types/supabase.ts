@@ -57,6 +57,11 @@ export interface Database {
         Insert: BlogPost
         Update: Partial<BlogPost>
       }
+      list_followers: {
+        Row: ListFollower
+        Insert: ListFollower
+        Update: Partial<ListFollower>
+      }
     }
     Views: {
       [_ in never]: never
@@ -147,8 +152,18 @@ export interface Profile {
   twitter_url: string | null
   instagram_url: string | null
   linkedin_url: string | null
+  github_url: string | null
+  website_url: string | null
   points: number
   rank: number | null
+  global_rank: number | null
+  total_points: number | null
+  items_completed: number | null
+  lists_following: number | null
+  lists_created: number | null
+  followers_count: number | null
+  following_count: number | null
+  is_private: boolean | null
   created_at: string
   updated_at: string
 }
@@ -188,3 +203,47 @@ export type Category =
   | 'travel'
   | 'hobbies'
   | 'other'
+  | 'miscellaneous'
+
+export type Difficulty = 'easy' | 'medium' | 'hard'
+export type TimelineEventType = 'item_completed' | 'memory_uploaded' | 'memory_shared' | 'list_created' | 'list_followed' | 'achievement_unlocked'
+
+export type BlogPostWithAuthor = BlogPost & {
+  author: {
+    username: string
+    avatar_url: string | null
+  }
+}
+
+export type BucketListInsert = Omit<BucketList, 'id' | 'created_at' | 'updated_at'>
+export type BucketListUpdate = Partial<BucketList>
+export type BucketItemInsert = Omit<BucketItem, 'id' | 'created_at' | 'updated_at'>
+export type BucketItemUpdate = Partial<BucketItem>
+export type MemoryInsert = Omit<Memory, 'id' | 'created_at' | 'updated_at'>
+export type MemoryUpdate = Partial<Memory>
+export type TimelineEventInsert = Omit<TimelineEvent, 'id' | 'created_at'>
+export type ProfileUpdate = Partial<Profile>
+
+export interface ListFollower {
+  id: string
+  user_id: string
+  bucket_list_id: string
+  created_at: string
+}
+
+export type ListFollowerInsert = Omit<ListFollower, 'id' | 'created_at'>
+
+export interface GlobalItem {
+  id: string
+  title: string
+  description: string | null
+  category: Category
+  difficulty: Difficulty | null
+  points: number
+  target_value: number | null
+  unit_type: string | null
+  current_value: number | null
+  location: string | null
+  created_at: string
+  updated_at: string
+}

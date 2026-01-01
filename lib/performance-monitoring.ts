@@ -107,20 +107,22 @@ export function measureWebVitals(callback: (metrics: WebVitals[]) => void) {
     // Cumulative Layout Shift
     let clsValue = 0
     const clsObserver = new PerformanceObserver((list: any) => {
+      let latestEntry: any = null
       for (const entry of list.getEntries()) {
         if (!(entry as any).hadRecentInput) {
           clsValue += (entry as any).value
+          latestEntry = entry
         }
       }
-      
+
       const rating = getPerformanceRating(clsValue, PERFORMANCE_THRESHOLDS.CLS)
-      
+
       callback([{
         id: `cls-${Date.now()}`,
         name: 'CLS',
         value: clsValue,
         rating,
-        delta: (entry as any).value
+        delta: latestEntry ? (latestEntry as any).value : 0
       }])
     })
     
