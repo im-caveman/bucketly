@@ -17,8 +17,9 @@ export function UserStats({ user }: UserStatsProps) {
   }
 
   // Check if avatar is a URL or emoji/text
-  const isAvatarUrl = user.avatar && (user.avatar.startsWith('http') || user.avatar.startsWith('/'))
+  const isAvatarUrl = user.avatar_url && (user.avatar_url.startsWith('http') || user.avatar_url.startsWith('/'))
   const avatarInitial = user.username ? user.username.charAt(0).toUpperCase() : '?'
+  const avatarSrc = isAvatarUrl ? user.avatar_url : `/placeholder-user.jpg`
 
   return (
     <Card className="overflow-hidden bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
@@ -28,7 +29,7 @@ export function UserStats({ user }: UserStatsProps) {
             {isAvatarUrl ? (
               <div className="w-16 h-16 rounded-full overflow-hidden relative">
                 <Image
-                  src={user.avatar}
+                  src={user.avatar_url}
                   alt={user.username}
                   fill
                   className="object-cover"
@@ -37,11 +38,11 @@ export function UserStats({ user }: UserStatsProps) {
               </div>
             ) : (
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-2xl font-bold text-white">
-                {user.avatar || avatarInitial}
+                {avatarInitial}
               </div>
             )}
             <div className="absolute -bottom-2 -right-2 bg-secondary text-white text-xs font-bold rounded-full w-7 h-7 flex items-center justify-center">
-              {getMedalIcon(user.globalRank)}
+              {getMedalIcon(user.global_rank ?? 0)}
             </div>
           </div>
           <div className="flex-1 space-y-3">
@@ -51,15 +52,15 @@ export function UserStats({ user }: UserStatsProps) {
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div className="text-center">
-                <div className="font-display font-bold text-primary text-lg">{user.totalPoints}</div>
+                <div className="font-display font-bold text-primary text-lg">{user.total_points ?? 0}</div>
                 <div className="text-xs text-muted-foreground">Points</div>
               </div>
               <div className="text-center">
-                <div className="font-display font-bold text-accent text-lg">{user.itemsCompleted}</div>
+                <div className="font-display font-bold text-accent text-lg">{user.items_completed ?? 0}</div>
                 <div className="text-xs text-muted-foreground">Completed</div>
               </div>
               <div className="text-center">
-                <div className="font-display font-bold text-secondary text-lg">{user.listsFollowing}</div>
+                <div className="font-display font-bold text-secondary text-lg">{user.lists_following ?? 0}</div>
                 <div className="text-xs text-muted-foreground">Following</div>
               </div>
             </div>
