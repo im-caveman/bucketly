@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { BlogCard } from '@/components/blog/BlogCard'
 import { BlogSearchWrapper } from '@/components/blog/BlogSearchWrapper'
-import type { BlogCategory, BlogPost } from '@/types/blog'
+import type { BlogCategory, BlogPostWithAuthor } from '@/types/blog'
 import { BookOpen, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

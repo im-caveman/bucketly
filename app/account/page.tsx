@@ -133,11 +133,11 @@ export default function AccountPage() {
                 <div className="w-full space-y-2 mb-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Total Points</span>
-                    <span className="font-semibold">{profile.total_points.toLocaleString()}</span>
+                    <span className="font-semibold">{profile.total_points ?? 0}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Items Completed</span>
-                    <span className="font-semibold">{profile.items_completed}</span>
+                    <span className="font-semibold">{profile.items_completed ?? 0}</span>
                   </div>
                 </div>
 
@@ -187,7 +187,7 @@ export default function AccountPage() {
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-muted/50 rounded-lg">
-                    <p className="text-3xl font-display font-bold text-primary">{profile.total_points.toLocaleString()}</p>
+                    <p className="text-3xl font-display font-bold text-primary">{(profile.total_points ?? 0).toLocaleString()}</p>
                     <p className="text-sm text-muted-foreground mt-1">Total Points</p>
                   </div>
                   <div className="text-center p-4 bg-muted/50 rounded-lg">

@@ -186,7 +186,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
                 <div className="flex items-center justify-center gap-4 w-full mb-6">
                   <div className="text-center p-2 bg-muted/30 rounded-lg min-w-[80px]">
-                    <p className="text-xl font-display font-bold text-primary">{profile.total_points.toLocaleString()}</p>
+                    <p className="text-xl font-display font-bold text-primary">{(profile.total_points ?? 0).toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">Points</p>
                   </div>
                   <FollowersDialog userId={profile.id}>
