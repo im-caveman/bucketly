@@ -1,5 +1,6 @@
 import type { Profile, BlogPost, Category } from '@/types/supabase'
 import type { UserProfile, UserProfileFrontend } from '@/types/bucket-list'
+import type { BlogPostWithAuthor } from '@/types/blog'
 
 /**
  * Transform database Profile to frontend UserProfile
@@ -37,14 +38,17 @@ export function transformProfile(dbProfile: Profile): UserProfile {
  */
 export function transformBlogPostWithAuthor(
   dbPost: BlogPost & {
-    profiles?: { username: string; avatar_url: string | null }
+    profiles?: { id: string; username: string; avatar_url: string | null; bio: string | null }
   }
 ): BlogPostWithAuthor {
   return {
     ...dbPost,
     author: {
+      id: dbPost.profiles?.id ?? '',
       username: dbPost.profiles?.username ?? 'Unknown',
+      full_name: dbPost.profiles?.username ?? 'Unknown Author',
       avatar_url: dbPost.profiles?.avatar_url ?? null,
+      bio: dbPost.profiles?.bio ?? null,
     },
   }
 }

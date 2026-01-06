@@ -61,7 +61,7 @@ export function ListCard({
   const { user } = useAuth()
 
   const items = list.items || []
-  const completed = items.filter((item) => item.completed).length
+  const completed = items.filter((item) => item.is_completed).length
   const total = items.length
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0
 

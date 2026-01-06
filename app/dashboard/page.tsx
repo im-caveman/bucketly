@@ -11,7 +11,7 @@ import { LayoutGrid, List as ListIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import type { Category, BucketList, UserProfile } from "@/types/bucket-list"
-import { toBucketList, toUserProfile } from "@/types/bucket-list"
+import { toBucketList } from "@/types/bucket-list"
 import { fetchUserProfile, fetchUserBucketLists } from "@/lib/bucket-list-service"
 import { supabase } from "@/lib/supabase"
 
@@ -44,7 +44,7 @@ export default function DashboardPage() {
 
         // Fetch user profile
         const profile = await fetchUserProfile(user.id)
-        setUserProfile(toUserProfile(profile))
+        setUserProfile(profile)
 
         // Fetch user's bucket lists (includes both created and shadow copies)
         const userLists = await fetchUserBucketLists(user.id)
@@ -60,15 +60,15 @@ export default function DashboardPage() {
               user_id: list.user_id,
               name: list.name,
               description: list.description,
-              category: list.category,
+              category: list.category as Category,
               is_public: list.is_public,
               follower_count: list.follower_count,
               created_at: list.created_at,
               updated_at: list.updated_at,
-              origin_id: list.origin_id, // CRITICAL: Include origin_id for ownership detection
+              origin_id: list.origin_id ?? null,
             },
-            list.bucket_items || [],
-            true // isFollowing is true for user's own lists in this context
+            (list.bucket_items || []) as import('@/types/supabase').BucketItem[],
+            true
           )
 
           return {

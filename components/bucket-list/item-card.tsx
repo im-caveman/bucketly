@@ -39,9 +39,9 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange, r
     setCurrentValue(clampedValue)
 
     // If reached target, mark as completed
-    if (clampedValue >= item.targetValue && !item.completed) {
+    if (clampedValue >= item.targetValue && !item.is_completed) {
       handleToggle(true)
-    } else if (clampedValue < item.targetValue && item.completed) {
+    } else if (clampedValue < item.targetValue && item.is_completed) {
       handleToggle(false)
     }
 
@@ -93,13 +93,13 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange, r
 
   return (
     <Card
-      className={`overflow-hidden transition-all duration-300 ${item.completed ? "opacity-60 bg-muted/50" : "hover:border-primary hover:shadow-md hover:shadow-primary/10"
+      className={`overflow-hidden transition-all duration-300 ${item.is_completed ? "opacity-60 bg-muted/50" : "hover:border-primary hover:shadow-md hover:shadow-primary/10"
         }`}
     >
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           <Checkbox
-            checked={item.completed}
+            checked={item.is_completed}
             onCheckedChange={handleToggle}
             className="mt-1"
             disabled={isUpdating || readonly}
@@ -108,7 +108,7 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange, r
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="flex-1">
                 <h4
-                  className={`font-display font-bold text-base ${item.completed ? "line-through text-muted-foreground" : ""
+                  className={`font-display font-bold text-base ${item.is_completed ? "line-through text-muted-foreground" : ""
                     }`}
                 >
                   {item.title}
@@ -130,7 +130,7 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange, r
                   {item.location}
                 </Badge>
               )}
-              {item.completed && (
+              {item.is_completed && (
                 <Badge className="bg-success/10 text-success gap-1">
                   <span>✓</span>
                   Completed
@@ -149,7 +149,7 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange, r
             </div>
             <Progress value={(currentValue / item.targetValue) * 100} className="h-2" />
 
-            {!item.completed && (
+            {!item.is_completed && (
               <div className="flex items-center gap-2 mt-2">
                 <Label htmlFor={`progress-${item.id}`} className="text-xs whitespace-nowrap">Update:</Label>
                 <Input
@@ -168,7 +168,7 @@ export function ItemCard({ item, onToggle, onUploadMemory, onCompletionChange, r
           </div>
         )}
 
-        {item.completed && onUploadMemory && (
+        {item.is_completed && onUploadMemory && (
           <Button onClick={onUploadMemory} variant="outline" size="sm" className="mt-3 w-full gap-2 bg-transparent">
             <span>📸</span>
             Upload Memory

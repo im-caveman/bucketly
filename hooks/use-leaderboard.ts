@@ -65,9 +65,15 @@ async function fetchLeaderboard(limit: number = 100): Promise<LeaderboardUser[]>
       rank: row.current_rank,
       username: row.username,
       avatar_url: row.avatar_url,
+      bio: null,
       points: row.total_points,
       completions: row.items_completed,
       current_rank: row.current_rank,
+      twitter_url: null,
+      instagram_url: null,
+      linkedin_url: null,
+      github_url: null,
+      website_url: null,
     }))
   }
 
@@ -76,9 +82,15 @@ async function fetchLeaderboard(limit: number = 100): Promise<LeaderboardUser[]>
     rank: row.current_rank,
     username: row.username,
     avatar_url: row.avatar_url,
+    bio: null,
     points: row.total_points,
     completions: row.items_completed,
     current_rank: row.current_rank,
+    twitter_url: null,
+    instagram_url: null,
+    linkedin_url: null,
+    github_url: null,
+    website_url: null,
   }))
 }
 
@@ -99,9 +111,15 @@ async function fetchUserRank(userId: string): Promise<LeaderboardUser | null> {
     rank: (data as any).global_rank || 0,
     username: (data as any).username,
     avatar_url: (data as any).avatar_url,
+    bio: null,
     points: (data as any).total_points,
     completions: (data as any).items_completed,
     current_rank: (data as any).global_rank || 0,
+    twitter_url: null,
+    instagram_url: null,
+    linkedin_url: null,
+    github_url: null,
+    website_url: null,
   }
 }
 

@@ -169,13 +169,13 @@ describe('Badge Integration', () => {
          }
      })
 
-     await createBucketList({
-         userId: 'user-1',
-         name: 'New List',
-         category: 'adventure',
-         isPublic: true,
-         items: [{ title: 'Item 1' }]
-     })
+      await createBucketList({
+          userId: 'user-1',
+          name: 'New List',
+          category: 'adventures',
+          isPublic: true,
+          items: [{ title: 'Item 1' }]
+      })
 
      expect(checkAndAwardBadges).toHaveBeenCalledWith('user-1')
   })

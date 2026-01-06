@@ -30,6 +30,7 @@ export function MobileHeader({ mockData }: MobileHeaderProps) {
 
     async function loadUnreadCount() {
       try {
+        if (!user?.id) return
         const notifications = await fetchUserNotifications(user.id);
         const unread = notifications.filter((n) => !n.read).length;
         setUnreadCount(unread);

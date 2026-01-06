@@ -68,7 +68,7 @@ export default function ExplorePage() {
       id: list.id,
       name: list.name,
       description: list.description || "",
-      category: list.category,
+      category: list.category as Category,
       items: list.bucket_items.map((item) => ({
         id: item.id,
         title: item.title,
@@ -76,12 +76,12 @@ export default function ExplorePage() {
         points: item.points,
         difficulty: item.difficulty || undefined,
         location: item.location || undefined,
-        completed: item.completed,
-        completedDate: item.completed_date || undefined,
+        is_completed: (item as any).completed ?? (item as any).is_completed ?? false,
+        completedDate: (item as any).completed_date || undefined,
       })),
       isFollowing: list.isFollowing || false,
       followers: list.follower_count,
-      createdBy: list.profiles.username,
+      createdBy: list.profiles?.username || 'Unknown User',
       isPublic: list.is_public,
     }
   }

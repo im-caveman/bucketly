@@ -56,7 +56,7 @@ export default function Widget({ widgetData }: WidgetProps) {
         // Find the first uncompleted item across all lists
         let found = false;
         for (const list of lists) {
-          const uncompleted = list.bucket_items?.find((item) => !item.completed);
+          const uncompleted = list.bucket_items?.find((item) => !item.is_completed);
           if (uncompleted) {
             setFocusItem({ title: uncompleted.title, listName: list.name });
             found = true;

@@ -94,9 +94,9 @@ export default function CreateListPage() {
             difficulty: item.difficulty,
             location: item.location,
             points: item.points,
-            target_value: item.target_value,
-            unit_type: item.unit_type
-          })))
+            ...(item.target_value !== undefined && { target_value: item.target_value }),
+            ...(item.unit_type !== undefined && { unit_type: item.unit_type }),
+          } as ListItem)))
         } catch (error) {
           console.error("Failed to fetch items", error)
         } finally {

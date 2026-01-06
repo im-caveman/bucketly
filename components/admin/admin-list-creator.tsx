@@ -36,7 +36,7 @@ export function AdminListCreator({ initialData, onSuccess, onCancel }: AdminList
     // List details
     const [listName, setListName] = useState(initialData?.name || "")
     const [listDescription, setListDescription] = useState(initialData?.description || "")
-    const [category, setCategory] = useState<Category | "">(initialData?.category || "")
+    const [category, setCategory] = useState<Category | "">(initialData?.category as Category | "" || "")
 
     // Items
     const [items, setItems] = useState<BucketItemInput[]>(
@@ -57,7 +57,7 @@ export function AdminListCreator({ initialData, onSuccess, onCancel }: AdminList
         if (initialData) {
             setListName(initialData.name)
             setListDescription(initialData.description || "")
-            setCategory(initialData.category)
+            setCategory((initialData?.category as Category | "") || "")
             setItems(initialData.bucket_items.map(item => ({
                 id: item.id,
                 title: item.title,

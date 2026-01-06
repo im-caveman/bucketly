@@ -73,6 +73,7 @@ export default function MobileNotifications({
 
     async function loadNotifications() {
       try {
+        if (!user?.id) return
         const fetchedNotifications = await fetchUserNotifications(user.id);
         setNotifications(fetchedNotifications);
       } catch (error) {

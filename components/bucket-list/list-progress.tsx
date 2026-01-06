@@ -9,11 +9,11 @@ interface ListProgressProps {
 }
 
 export function ListProgress({ items, points }: ListProgressProps) {
-  const completed = items.filter((i) => i.completed).length
+  const completed = items.filter((i) => i.is_completed).length
   const total = items.length
   const percentage = Math.round((completed / total) * 100)
   const totalPoints = items.reduce((sum, i) => sum + i.points, 0)
-  const earnedPoints = items.filter((i) => i.completed).reduce((sum, i) => sum + i.points, 0)
+  const earnedPoints = items.filter((i) => i.is_completed).reduce((sum, i) => sum + i.points, 0)
 
   return (
     <Card className="bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20">

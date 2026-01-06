@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { BlogCard } from '@/components/blog/BlogCard'
 import { BlogSearchWrapper } from '@/components/blog/BlogSearchWrapper'
-import type { BlogCategory, BlogPostWithAuthor } from '@/types/blog'
+import type { BlogCategory, BlogPost, BlogPostWithAuthor } from '@/types/blog'
 import { BookOpen, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -14,7 +14,7 @@ function BlogContent() {
     const category = searchParams.get('category') as BlogCategory | null
     const search = searchParams.get('search') || ''
 
-    const [allPosts, setAllPosts] = useState<BlogPost[]>([])
+    const [allPosts, setAllPosts] = useState<BlogPostWithAuthor[]>([])
     const [loading, setLoading] = useState(true)
 
     // Fetch all posts once on mount
@@ -48,7 +48,7 @@ function BlogContent() {
             filtered = filtered.filter(post =>
                 post.title.toLowerCase().includes(searchLower) ||
                 post.excerpt?.toLowerCase().includes(searchLower) ||
-                post.tags.some(tag => tag.toLowerCase().includes(searchLower))
+                post.tags.some((tag: string) => tag.toLowerCase().includes(searchLower))
             )
         }
 

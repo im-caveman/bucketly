@@ -41,6 +41,7 @@ export async function generateMetadata(
       .single()
 
     if (item) {
+      const itemData = item as unknown as { title: string; points: number; bucket_lists?: { category: string; profiles?: { username: string }[] } }
       // Find latest memory photo if any
       let photo = ''
       if (item.memories && item.memories.length > 0) {
@@ -50,10 +51,10 @@ export async function generateMetadata(
         }
       }
 
-      const username = item.bucket_lists?.profiles?.username || 'User'
-      const title = item.title
-      const points = item.points
-      const category = item.bucket_lists?.category || 'General'
+      const username = itemData.bucket_lists?.profiles?.[0]?.username || 'User'
+      const title = itemData.title
+      const points = itemData.points
+      const category = itemData.bucket_lists?.category || 'General'
 
       const ogUrl = new URL(`${process.env.NEXT_PUBLIC_SUPABASE_URL ? 'https://bucketly.vercel.app' : 'http://localhost:3000'}/api/og/completion`)
       // NOTE: We should use the DEPLOYED URL for OG images.
@@ -94,12 +95,14 @@ export async function generateMetadata(
     .single()
 
   if (list) {
+    const listData = list as unknown as { name: string; description: string | null; profiles?: { username: string }[] | { username: string } }
+    const profileUsername = Array.isArray(listData.profiles) ? listData.profiles[0]?.username : listData.profiles?.username
     return {
-      title: `${list.name} by ${list.profiles?.username || 'User'} | Bucketly`,
-      description: list.description || 'Check out this bucket list on Bucketly.',
+      title: `${listData.name} by ${profileUsername || 'User'} | Bucketly`,
+      description: listData.description || 'Check out this bucket list on Bucketly.',
       openGraph: {
-        title: list.name,
-        description: list.description || undefined,
+        title: listData.name,
+        description: listData.description || undefined,
       }
     }
   }

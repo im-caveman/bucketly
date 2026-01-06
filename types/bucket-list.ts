@@ -49,7 +49,7 @@ export interface BucketListItem {
   points: number
   difficulty?: Difficulty
   location?: string
-  completed: boolean
+  is_completed: boolean
   completedDate?: string
   bucketListId?: string
   createdAt?: string
@@ -70,7 +70,7 @@ export function toBucketListItem(dbItem: DbBucketItem): BucketListItem {
     points: dbItem.points,
     difficulty: dbItem.difficulty || undefined,
     location: dbItem.location || undefined,
-    completed: dbItem.completed,
+    is_completed: dbItem.is_completed,
     completedDate: dbItem.completed_date || undefined,
     bucketListId: dbItem.bucket_list_id,
     createdAt: dbItem.created_at,
@@ -201,7 +201,7 @@ export function toTimelineEvent(dbEvent: DbTimelineEvent): TimelineEvent {
     listName: metadata.list_name,
     photos: metadata.photos,
     points: metadata.points,
-    isPublic: dbEvent.is_public,
+    isPublic: (dbEvent as any).is_public ?? false,
     thumbnail: metadata.thumbnail,
     userId: dbEvent.user_id,
     metadata,

@@ -84,7 +84,7 @@ export function MemoryManager({
 
     setIsDeleting(true)
     try {
-      await deleteMemory(memoryToDelete)
+      await deleteMemory(memoryToDelete, userId)
 
       toast({
         title: "Memory deleted",

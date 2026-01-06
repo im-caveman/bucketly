@@ -233,6 +233,7 @@ export default function ListDetailPageExample() {
             onClose={() => setAddItemDialog(false)}
             onItemAdded={loadListData}
             listId={listId}
+            category={listData.category}
           />
 
           {editItemDialog.item && (

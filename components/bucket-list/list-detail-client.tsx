@@ -10,6 +10,7 @@ import { ListCompletionModal } from "@/components/bucket-list/list-completion-mo
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import type { Category } from "@/types/bucket-list"
 import { fetchBucketListById, toggleItemCompletion, createMemory, uploadMemoryPhoto, fetchUserMemoryForItem, deleteMemory, cloneBucketList, followBucketList, unfollowBucketList, fetchUserBucketLists, type BucketListWithItems } from "@/lib/bucket-list-service"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2, ShieldCheck, Bookmark, Lock, Info, Plus, Pencil, Trash2 } from "lucide-react"
@@ -508,7 +509,7 @@ export function ListDetailClient() {
                             setIsAddItemOpen(false)
                         }}
                         listId={list.id}
-                        category={list.category}
+                        category={list.category as Category}
                     />
 
                     <EditListDialog

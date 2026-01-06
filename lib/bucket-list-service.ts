@@ -121,7 +121,7 @@ export async function fetchUserBucketLists(userId: string, onlyOwned: boolean = 
     if (onlyOwned) {
       // Robustly filter in memory as well to ensure no shadow copies slip through
       // regardless of DB state or query quirks
-      return (allLists || []).filter(l => !l.origin_id) as BucketListWithItems[]
+      return (allLists || []).filter(l => !l.origin_id) as unknown as BucketListWithItems[]
     }
 
     // Get all lists the user is following to filter shadow copies
@@ -141,7 +141,7 @@ export async function fetchUserBucketLists(userId: string, onlyOwned: boolean = 
       return followedListIds.has(list.origin_id)
     })
 
-    return filteredLists as BucketListWithItems[]
+    return filteredLists as unknown as BucketListWithItems[]
   } catch (error) {
     logError(error, { context: 'fetchUserBucketLists', userId })
     throw handleSupabaseError(error)
@@ -202,7 +202,7 @@ export async function fetchPublicBucketLists(
     }
 
     // Check following status for each list if user is logged in
-    let lists = data as BucketListWithItems[]
+    let lists = data as unknown as BucketListWithItems[]
     if (userId && data) {
       const listIds = data.map(list => list.id)
       const { data: followData } = await supabase
@@ -216,7 +216,7 @@ export async function fetchPublicBucketLists(
       lists = data.map(list => ({
         ...list,
         isFollowing: followedListIds.has(list.id)
-      })) as (BucketListWithItems & { isFollowing: boolean })[]
+      })) as unknown as (BucketListWithItems & { isFollowing: boolean })[]
     }
 
     return {
@@ -279,7 +279,7 @@ export async function fetchBucketListById(listId: string, userId?: string) {
     isFollowing = !!followData
   }
 
-  return { ...data, isFollowing } as BucketListWithItems & { isFollowing: boolean }
+  return { ...data, isFollowing } as unknown as BucketListWithItems & { isFollowing: boolean }
 }
 
 export async function searchBucketLists(searchQuery: string, category?: Category, userId?: string) {
@@ -339,10 +339,10 @@ export async function searchBucketLists(searchQuery: string, category?: Category
     return data.map(list => ({
       ...list,
       isFollowing: followedListIds.has(list.id)
-    })) as (BucketListWithItems & { isFollowing: boolean })[]
+    })) as unknown as (BucketListWithItems & { isFollowing: boolean })[]
   }
 
-  return data as BucketListWithItems[]
+  return data as unknown as BucketListWithItems[]
 }
 
 export type UpdateBucketListData = Omit<BucketListUpdate, 'id' | 'user_id' | 'created_at' | 'updated_at' | 'follower_count'>
@@ -624,7 +624,16 @@ export async function fetchGlobalItems(
 
 // Bucket Item Management Functions
 
-export type AddBucketItemData = Omit<BucketItemInsert, 'id' | 'bucket_list_id' | 'completed' | 'completed_date' | 'created_at' | 'updated_at'>
+export interface AddBucketItemData {
+  title: string
+  description: string | null
+  points: number
+  difficulty: 'easy' | 'medium' | 'hard' | null
+  location: string | null
+  target_value?: number | null
+  unit_type?: string | null
+  current_value?: number | null
+}
 
 export async function addBucketItem(listId: string, itemData: AddBucketItemData) {
   // Check if target list is a shadow copy
@@ -1447,10 +1456,10 @@ export async function fetchTrendingBucketLists(userId?: string, limit: number = 
     return data.map(list => ({
       ...list,
       isFollowing: followedListIds.has(list.id)
-    })) as (BucketListWithItems & { isFollowing: boolean })[]
+    })) as unknown as (BucketListWithItems & { isFollowing: boolean })[]
   }
 
-  return data as BucketListWithItems[]
+  return data as unknown as BucketListWithItems[]
 }
 
 // Timeline Functions
@@ -1773,7 +1782,7 @@ export async function fetchUserBadges(userId: string) {
     throw error
   }
 
-  return data as UserBadge[]
+  return data as unknown as UserBadge[]
 }
 
 export async function awardBadge(userId: string, badgeId: string) {
